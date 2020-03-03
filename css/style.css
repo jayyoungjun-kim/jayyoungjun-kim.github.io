@@ -197,7 +197,27 @@
 }
 
 .project__bodytext {
-  padding: 40px 200px 120px 200px;
+  padding: 30px 200px 120px 200px;
+}
+
+.project__bodytext__point {
+  padding: 0 0 120px 0;
+  font-weight: 300;
+  font-size: 26px;
+  color: #909090;
+  line-height: 50px;
+}
+
+.project__bodytext__title {
+  padding: 0 0 20px 0;
+  font-weight: 300;
+  font-size: 24px;
+  color: #909090;
+  line-height: 32px;
+}
+
+.project__video {
+  padding: 0 0 0 0;
 }
 
 .project__blockquote {
@@ -261,7 +281,7 @@
 }
 
 .project__img {
-  padding: 0 0 20px 0;
+  padding: 0 0 24px 0;
 }
 
 .project__img__grid__2 {
@@ -546,6 +566,22 @@ li {
   .project__bodytext {
     padding: 16px 0 60px 0;
     font-size: 12px;
+  }
+
+  .project__bodytext__point {
+    padding: 0 0 60px 0;
+    font-weight: 300;
+    font-size: 16px;
+    color: #909090;
+    line-height: 30px;
+  }
+
+  .project__bodytext__title {
+    padding: 0 0 10px 0;
+    font-weight: 300;
+    font-size: 16px;
+    color: #909090;
+    line-height: 32px;
   }
 
   .project__blockquote {
