@@ -439,11 +439,11 @@ li {
 
 @media only screen and (min-width:0px) and (max-width:1023px) {
   .container {
-    margin: 24px 24px 20px 24px;
+    margin: 16px 24px 20px 24px;
   }
 
   .main__header__title {
-    font-size: 24px;
+    font-size: 32px;
   }
 
   .main_header_profile {
