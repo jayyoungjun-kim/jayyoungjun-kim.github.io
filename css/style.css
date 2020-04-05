@@ -183,7 +183,7 @@
 
 .project {
   margin: 0 auto;
-  margin-top: 160px;
+  margin-top: 120px;
   max-width: 1080px;
 }
 
@@ -561,7 +561,7 @@ li {
 
   .project {
     margin: 0 auto;
-    margin-top: 80px;
+    margin-top: 60px;
   }
 
   .project__title {
