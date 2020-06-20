@@ -184,7 +184,7 @@
 .project {
   margin: 0 auto;
   margin-top: 120px;
-  max-width: 1080px;
+  max-width: 1400px;
 }
 
 .project__title {
@@ -204,7 +204,7 @@
 }
 
 .project__bodytext {
-  padding: 30px 200px 120px 200px;
+  padding: 30px 300px 120px 300px;
 }
 
 .project__bodytext__point {
