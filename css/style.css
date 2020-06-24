@@ -107,7 +107,7 @@
   margin-right: 50%;
   font-size: 20px;
   font-weight: 400;
-  color: #616161;
+  color: #515151;
 }
 
 .about__list__40 {
@@ -229,7 +229,7 @@
 
 .project__blockquote {
   font-style: italic;
-  padding: 40px 200px 120px 200px;
+  padding: 40px 300px 120px 300px;
 }
 
 .project__lastpadding {
@@ -313,18 +313,22 @@
   margin: 160px 0 0 0;
 }
 
-.line {
-  border-color: #c9c9c9;
-  border-style: solid;
-  border-width: 0.5px;
+[class^='line'] {
+  margin: 1em 0;
+  height: 1px;
 }
 
-.line__project__header {
+.line {
+  background-image: linear-gradient(to bottom, black 0%, black 22%, transparent 30%);
+  background-size: 100% 1px;
+}
+
+/*.line__project__header {
   margin: 80px 160px 40px 0;
   border-color: #c9c9c9;
   border-style: solid;
   border-width: 0.5px;
-}
+}*/
 
 body {
   font-family: 'Roboto Mono', monospace, 'Spoqa Han Sans', 'Spoqa Han Sans JP', 'Sans-serif';
@@ -412,7 +416,6 @@ li {
 }
 
 @media only screen and (min-width:1024px) {
-
   .about__img__1 {
     margin-top: 60px;
     max-width: 980px;
@@ -434,7 +437,6 @@ li {
     max-width: 400px;
     display: none;
   }
-
 }
 
 @media only screen and (min-width:0px) and (max-width:1023px) {
@@ -443,7 +445,7 @@ li {
   }
 
   .main__header__title {
-    font-size: 32px;
+    font-size: 40px;
   }
 
   .main_header_profile {
@@ -636,9 +638,8 @@ li {
   }
 
   .line {
-    border-color: #c9c9c9;
-    border-style: solid;
-    border-width: 0.5px;
+    background-image: linear-gradient(to bottom, black 0%, black 22%, transparent 30%);
+    background-size: 100% 1px;
   }
 
   .footer {
