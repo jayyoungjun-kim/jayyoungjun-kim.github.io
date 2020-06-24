@@ -184,7 +184,7 @@
 .project {
   margin: 0 auto;
   margin-top: 120px;
-  max-width: 1400px;
+  max-width: 1300px;
 }
 
 .project__title {
@@ -204,7 +204,7 @@
 }
 
 .project__bodytext {
-  padding: 30px 300px 120px 300px;
+  padding: 30px 200px 120px 200px;
 }
 
 .project__bodytext__point {
@@ -329,7 +329,6 @@
   border-style: solid;
   border-width: 0.5px;
 }*/
-
 body {
   font-family: 'Roboto Mono', monospace, 'Spoqa Han Sans', 'Spoqa Han Sans JP', 'Sans-serif';
   font-size: 14px;
