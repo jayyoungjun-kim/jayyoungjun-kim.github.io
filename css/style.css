@@ -91,6 +91,21 @@
   display: block;
 }
 
+.main__content__list__title {
+  padding: 8px 0 0 0;
+  word-spacing: 0px;
+  letter-spacing: 0px;
+  font-weight: 400;
+  margin-top: -2px;
+  margin-bottom: -8px;
+}
+
+.main__content__list__category {
+  word-spacing: 0px;
+  letter-spacing: 0px;
+  font-size: 12px;
+}
+
 .about__title {
   font-weight: 400;
   font-size: 50px;
@@ -460,7 +475,7 @@ li {
   }
 
   .main__nav__item {
-    margin: 16px 12px 0 0px;
+    margin: 0px 12px 0 0px;
   }
 
   .main__content {
@@ -477,6 +492,15 @@ li {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     grid-auto-flow: row dense;
     grid-gap: 20px;
+  }
+
+  .main__content__list__title {
+    margin-bottom: -2px;
+  }
+
+  .main__content__list__category {
+    font-size: 10px;
+    line-height: 18px;
   }
 
   .about__title {
