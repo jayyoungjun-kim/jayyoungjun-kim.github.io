@@ -155,6 +155,19 @@
   text-transform: uppercase;
 }
 
+.about__iam {
+  margin: 20px 0 0 0;
+  margin-right: 50%;
+}
+
+.info__iam__list {
+  display: inline-block;
+  margin: 20px 20px 0 0px;
+  font-size: 18px;
+  font-weight: 300;
+  color: #212121;
+}
+
 .info__caption {
   margin-top: 160px;
   margin-right: 50%;
