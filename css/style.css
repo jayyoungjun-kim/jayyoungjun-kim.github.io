@@ -91,10 +91,6 @@
   display: block;
 }
 
-.main__content__list__img a:hover img {
-
-}
-
 .main__content__list__title {
   padding: 8px 0 0 0;
   word-spacing: 0px;
@@ -393,15 +389,8 @@ display: block;
   background-size: 100% 1px;
 }
 
-/*.line__project__header {
-  margin: 80px 160px 40px 0;
-  border-color: #c9c9c9;
-  border-style: solid;
-  border-width: 0.5px;
-}*/
-
 body {
-  font-family:'Roboto Mono', monospace,'Spoqa Han Sans Neo', 'sans-serif';
+  font-family:'Roboto Mono', 'sans-serif';
   font-size: 14px;
   line-height: 2;
   font-weight: 300;
