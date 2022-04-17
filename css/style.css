@@ -366,7 +366,7 @@ display: block;
 .project__img__grid__4 {
   padding: 0 0 20px 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   grid-auto-flow: row dense;
   grid-gap: 20px 20px;
 }
