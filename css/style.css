@@ -566,6 +566,12 @@
   margin: 0 0 0 0;
 }
 
+.project-img video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .content-img {
   margin: 0 0 0 0;
 }
@@ -575,13 +581,13 @@
 .project-body-container {
   width: 800px;
   margin: auto;
-  padding: 56px 0 160px 0;
+  padding: 56px 0 200px 0;
 }
 
 .project-body-empty {
   width: 800px;
   margin: auto;
-  padding: 0 0 160px 0;
+  padding: 0 0 200px 0;
 }
 
 .project-body-between {
