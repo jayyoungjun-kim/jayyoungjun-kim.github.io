@@ -572,7 +572,8 @@
 /* project > header > container */
 
 .project-header {
-  width: 800px;
+  width: 100%;
+  max-width: 800px;
   padding: 64px 0 130px 0;
   margin: auto;
 }
@@ -652,7 +653,8 @@
 /* project > body */
 
 .project-body-container {
-  width: 800px;
+  width: 100%;
+  max-width: 800px;
   margin: auto;
   padding: 56px 0 200px 0;
 }
@@ -1344,7 +1346,8 @@ ZÒÚhcxxxxxxxxAhhhhhhhhhhhhhhjxxdfsu
   /*  project > header > container */
 
   .project-header {
-    width: auto;
+    max-width: 100%;
+    width: 100%;
     padding: 40px 0 80px 0;
     margin: 0 0 0 0;
   }
@@ -1399,6 +1402,7 @@ ZÒÚhcxxxxxxxxAhhhhhhhhhhhhhhjxxdfsu
   /*  project > body */
 
   .project-body-container {
+    max-width: 100%;
     width: 100%;
     margin: auto;
     padding: 24px 0 100px 0;
