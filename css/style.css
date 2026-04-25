@@ -960,7 +960,50 @@ img {
   height: auto;
 }
 
+/* ===== 모바일 좌우 흔들림 방지 ===== */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
 
+/* ===== 메뉴 고정 (모든 브라우저 대응) ===== */
+.gnb-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/* ===== 콘텐츠가 메뉴에 가려지지 않게 ===== */
+.contents,
+.contents-project {
+  padding-top: 48px;
+}
+
+/* ===== 고정 width로 인한 overflow 방지 ===== */
+.project-header,
+.project-body-container,
+.project-body-empty,
+.project-body-between {
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===== 미디어 요소 overflow 방지 ===== */
+img,
+video,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
 
 
 
