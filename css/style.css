@@ -960,33 +960,7 @@ img {
   height: auto;
 }
 
-html,
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden !important;
-  overscroll-behavior-x: none;
-}
 
-.container,
-.contents,
-.contents-project,
-.project-container,
-.project-header,
-.project-body-container,
-.project-body-empty,
-.project-body-between,
-.project-stakeholder-container,
-.project-pagination-container {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-img,
-video,
-iframe {
-  max-width: 100%;
-}
 
 
 
