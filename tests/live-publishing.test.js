@@ -12,6 +12,7 @@ test('live revision is durable and broadcasts after GitHub head changes',async()
   await live.refresh();assert.equal(messages.length,1);
   sha='b'.repeat(40);await live.refresh();assert.equal(messages.at(-1).revision,sha);
   const restored=new LiveContent(ctx,{GITHUB_TOKEN:'secret'});assert.equal((await(await restored.fetch(new Request('https://live/revision'))).json()).revision,sha);
+  storage.set('checkedAt',0);sha='c'.repeat(40);assert.equal((await(await restored.fetch(new Request('https://live/revision'))).json()).revision,sha);
   globalThis.fetch=async()=>new Response('',{status:503});await assert.rejects(live.refresh());assert.equal(storage.get('revision'),sha);
  }finally{globalThis.fetch=original;}
 });
