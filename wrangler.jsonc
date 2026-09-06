@@ -3,6 +3,11 @@
   "main": "server/worker.js",
   "compatibility_date": "2026-09-06",
   "workers_dev": true,
-  "vars": { "GOOGLE_CLIENT_ID": "" },
-  "observability": { "enabled": false }
+  "vars": {
+    "GOOGLE_CLIENT_ID": "660453347503-c0dsbipendf78q18c306jbjq9hs9fh94.apps.googleusercontent.com"
+  },
+  "observability": {
+    "enabled": false
+  },
+  "account_id": "9b6458b406f20dd0542b87b2e07963f1"
 }
