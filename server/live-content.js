@@ -7,6 +7,7 @@ export class LiveContent {
   const run=async()=>{
    const r=await fetch('https://api.github.com/repos/'+REPO+'/git/ref/heads/master',{headers:{Authorization:'Bearer '+this.env.GITHUB_TOKEN,'User-Agent':'portfolio-live','Cache-Control':'no-cache'}});
    if(!r.ok)throw Error('Cannot read published revision');
+   await this.ctx.storage.put('checkedAt',Date.now());
    const sha=(await r.json()).object.sha,old=await this.ctx.storage.get('revision');
    if(old!==sha){await this.ctx.storage.put('revision',sha);await this.ctx.storage.put('published',[sha,...(await this.ctx.storage.get('published')||[])].slice(0,32));for(const socket of this.ctx.getWebSockets())try{socket.send(JSON.stringify({revision:sha}));}catch{}}
    return sha;
@@ -17,7 +18,7 @@ export class LiveContent {
   const path=new URL(request.url).pathname;
   if(path==='/refresh')return Response.json({revision:await this.refresh(),published:await this.ctx.storage.get('published')||[]});
   let revision=await this.ctx.storage.get('revision');
-  if(!revision)revision=await this.refresh();
+  if(!revision||Date.now()-(await this.ctx.storage.get('checkedAt')||0)>5000)revision=await this.refresh();
   if(path==='/socket'&&request.headers.get('Upgrade')?.toLowerCase()==='websocket'){
    const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);
    server.send(JSON.stringify({revision}));
