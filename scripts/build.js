@@ -8,4 +8,4 @@ console.log('Built static admin/app.bundle.js. GitHub credentials stay on the au
 if(API_ORIGIN && (new URL(API_ORIGIN).origin!==API_ORIGIN || !API_ORIGIN.startsWith('https://')))throw new Error('Invalid API_ORIGIN');
 const htmlPath='admin/index.html';
 const html=await readFile(htmlPath,'utf8');
-await writeFile(htmlPath,html.replace(/connect-src [^;]*;/,`connect-src https://accounts.google.com/gsi/${API_ORIGIN?' '+API_ORIGIN:''};`));
+await writeFile(htmlPath,html.replace(/connect-src [^;]*;/,`connect-src https://accounts.google.com/gsi/${API_ORIGIN?' '+API_ORIGIN:''} 'self';`));

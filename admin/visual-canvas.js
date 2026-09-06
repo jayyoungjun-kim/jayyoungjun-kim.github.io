@@ -1,5 +1,7 @@
-import siteCSS from '../css/style.css';
+import bundledSiteCSS from '../css/style.css';
 import {canvasDocument} from '../lib/canvas.js';
+let siteCSS=bundledSiteCSS;
+export function updateCanvasStyles(css){siteCSS=css;for(const frame of document.querySelectorAll('.site-canvas')){const style=frame.shadowRoot?.querySelector('[data-site-style]');if(style)style.textContent=css.replaceAll('@media only screen and','@container canvas');}}
 let savedPage='',selectedIndex=-1,viewport='desktop',readonly=false,lastHeight=1000,cleanup;
 const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls||'';if(text!==undefined)n.textContent=text;return n;};
 const btn=(text,fn)=>{const b=el('button','',text);b.type='button';b.onclick=fn;return b;};
@@ -44,8 +46,9 @@ export function renderVisualCanvas(host,ctx,renderForm,reveal){
   parsed.querySelectorAll('script,iframe,object,embed,form,svg,math,template').forEach(n=>n.remove());
   for(const n of parsed.querySelectorAll('[src],[href],[poster]'))for(const key of ['src','href','poster'])if(n.hasAttribute(key)){const value=n.getAttribute(key);if(value)n.setAttribute(key,new URL(value,ctx.siteOrigin.replace(/\/$/,'')+'/').href);}
   const root=frame.shadowRoot;root.replaceChildren();
-  const style=el('style');style.textContent=siteCSS.replaceAll('@media only screen and','@container canvas')+'\n'+Array.from(parsed.querySelectorAll('head style')).map(n=>n.textContent).join('\n')+'\n:host{display:block;color:#111;font-family:Pretendard,Arial,sans-serif}.canvas-viewport{container-type:inline-size;container-name:canvas}.canvas-page{display:flow-root;background:white}.canvas-page *{box-sizing:border-box}';
-  const shell=el('div','canvas-viewport'),body=el('div','canvas-page');while(parsed.body.firstChild)body.append(parsed.body.firstChild);shell.append(body);root.append(style,shell);for(const link of parsed.querySelectorAll('head link[rel="stylesheet"]'))if(!link.href.endsWith('/css/style.css')){link.onload=fit;root.prepend(link);}
+  const siteStyle=el('style');siteStyle.dataset.siteStyle='';siteStyle.textContent=siteCSS.replaceAll('@media only screen and','@container canvas');
+  const style=el('style');style.textContent=Array.from(parsed.querySelectorAll('head style')).map(n=>n.textContent).join('\n')+'\n:host{display:block;color:#111;font-family:Pretendard,Arial,sans-serif}.canvas-viewport{container-type:inline-size;container-name:canvas}.canvas-page{display:flow-root;background:white}.canvas-page *{box-sizing:border-box}';
+  const shell=el('div','canvas-viewport'),body=el('div','canvas-page');while(parsed.body.firstChild)body.append(parsed.body.firstChild);shell.append(body);root.append(siteStyle,style,shell);for(const link of parsed.querySelectorAll('head link[rel="stylesheet"]'))if(!link.href.endsWith('/css/style.css')){link.onload=fit;root.prepend(link);}
   bind();
  }catch(e){note.textContent='화면 반영을 기다리는 중: '+e.message;}}
  if(ctx.current.page==='index.html'&&ctx.api)ctx.api('/api/page?page=JavaScript/script.js').then(data=>{if(!disposed){intro=data.fields[0].value;draw();}}).catch(()=>{});
