@@ -517,7 +517,8 @@
 
 /* info > section > public activity */
 
-.info-section-date-first {
+.info-section-date-first,
+.info-section-date {
   font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
@@ -525,12 +526,9 @@
   padding: 0 0 8px 0;
 }
 
-.info-section-date {
-  font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: #999;
-  padding: 40px 0 8px 0;
+/* Position determines spacing, including drafts with legacy first-date classes. */
+.info-section-activity ~ .info-section-activity > :is(.info-section-date, .info-section-date-first) {
+  padding-top: 40px;
 }
 
 .info-section-public-title {
@@ -1337,7 +1335,8 @@ iframe {
 
   /* info > section > public activity */
 
-  .info-section-date-first {
+  .info-section-date-first,
+  .info-section-date {
     font-size: 13px;
       font-weight: 500;
       line-height: 1.4;
@@ -1345,12 +1344,8 @@ iframe {
     padding: 0 0 8px 0;
   }
 
-  .info-section-date {
-    font-size: 13px;
-      font-weight: 500;
-      line-height: 1.4;
-      color: #999;
-    padding: 52px 0 8px 0;
+  .info-section-activity ~ .info-section-activity > :is(.info-section-date, .info-section-date-first) {
+    padding-top: 52px;
   }
 
   .info-section-public-title {
