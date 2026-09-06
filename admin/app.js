@@ -1,3 +1,4 @@
+import {fitSidebar} from './sidebar-layout.js';
 import {startLiveSync,syncDecision} from './live-sync.js';
 import {updateCanvasStyles} from './visual-canvas.js';
 import { optimizeImage } from './image-optimizer.js';
@@ -64,7 +65,7 @@ async function login(credential) {
       credential = '';
       token = true;
       $('account').textContent = user.login;
-      $('login').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
+      $('login').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;refreshSidebar?.();
       await loadPages();
       if (!current) await openPage('index.html');
       notice('Google로 로그인했습니다. 초안은 이 브라우저에만 저장됩니다.');
@@ -323,4 +324,5 @@ $('export-draft').onclick = () => run(async () => {
 window.addEventListener('pagehide', () => { liveSync?.stop();syncEpoch++;service.disconnect(); token=false; });
 window.addEventListener('pageshow', e => { if(e.persisted)showLogin(true); });
 window.addEventListener('beforeunload', e => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
+const refreshSidebar=fitSidebar();
 setup();

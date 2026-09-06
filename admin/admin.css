@@ -24,3 +24,8 @@ body{background:#f7f8fa;color:#20242b;font-family:Arial,'Apple SD Gothic Neo','M
 .drag-handle{touch-action:none}.block-sorting{cursor:grabbing!important;user-select:none}.block-insertion-slot{flex-shrink:0;clear:both}
 
 .media-card video{display:block;width:100%;height:auto;background:#111;border-radius:6px}.media-controls select{width:auto;max-width:140px}
+
+/* Keep the last navigation action inside the visible scroll area. */
+.sidebar{height:var(--sidebar-available-height,calc(100dvh - 140px));max-height:var(--sidebar-available-height,calc(100dvh - 140px));overflow-y:auto;overflow-x:hidden;padding-bottom:32px;scroll-padding-bottom:24px;scrollbar-gutter:stable}
+.sidebar>.history-button{display:block;width:calc(100% - 16px);white-space:normal;overflow-wrap:anywhere}
+@media(max-width:700px){.sidebar{height:auto;max-height:min(260px,var(--sidebar-available-height,260px))}}
