@@ -1,0 +1,5 @@
+# Local development only. Never commit .dev.vars or a real token.
+GITHUB_TOKEN=
+GOOGLE_CLIENT_ID=
+# Register this exact origin in your Google OAuth web client for local testing.
+ADMIN_ORIGIN=http://127.0.0.1:8080

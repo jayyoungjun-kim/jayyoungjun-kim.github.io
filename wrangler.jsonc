@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jay-portfolio-admin-api",
+  "main": "server/worker.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {
+    "ADMIN_ORIGIN": "https://jayyoungjun-kim.github.io",
+    "SITE_ORIGIN": "https://jayyoungjun-kim.github.io",
+    "GOOGLE_CLIENT_ID": "",
+    "GITHUB_OWNER": "jayyoungjun-kim",
+    "GITHUB_REPO": "jayyoungjun-kim.github.io",
+    "GITHUB_BRANCH": "master"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "jay-portfolio-admin",
+    "database_id": "00000000-0000-0000-0000-000000000000",
+    "migrations_dir": "server/migrations"
+  }],
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "jay-portfolio-admin-drafts" }]
+}
