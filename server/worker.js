@@ -39,7 +39,7 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
    if(path==='/git/trees'&&(!Array.isArray(body.tree)||body.tree.some(item=>!(/^[a-z0-9][a-z0-9-]{0,79}\.html$/.test(item.path)||item.path==='JavaScript/script.js'||/^assets\/uploads\/[a-f0-9-]+\.(png|jpg|gif|webp|pdf|mp4)$/.test(item.path))||item.mode!=='100644'||item.type!=='blob'||(item.sha===null&&['index.html','about.html','info.html','JavaScript/script.js'].includes(item.path)))))return reply(403,'허용되지 않은 콘텐츠 경로입니다.');
   }
   try{
-   const upstream=await fetcher(`https://api.github.com/repos/${REPO}${path}${url.search}`,{method:request.method,headers:{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'portfolio-admin'},redirect:'error',...(body?{body:JSON.stringify(body)}:{})});
+   const upstream=await fetcher(`https://api.github.com/repos/${REPO}${path}${url.search}`,{method:request.method,headers:{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'portfolio-admin'},redirect:'manual',...(body?{body:JSON.stringify(body)}:{})});
    if(!upstream.ok)return reply(upstream.status===401?503:upstream.status,'GitHub 연결 권한 또는 원본 변경 여부를 확인해 주세요.');
    return new Response(upstream.body,{status:upstream.status,headers});
   }catch{return reply(502,'GitHub 연결에 실패했습니다. 발행 이력을 확인한 뒤 다시 시도해 주세요.');}

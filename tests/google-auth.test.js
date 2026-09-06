@@ -19,7 +19,7 @@ test('proxy authenticates before any GitHub call and never returns server creden
  let calls=0;
  const denied=createHandler({verify:async()=>{throw Error();},fetcher:async()=>{calls++;}});
  assert.equal((await denied(request('/github'),env)).status,401);assert.equal(calls,0);
- const handler=createHandler({verify:async()=>({login:'jayyoungjunkim@gmail.com'}),fetcher:async(url,options)=>{calls++;assert.equal(url,'https://api.github.com/repos/jayyoungjun-kim/jayyoungjun-kim.github.io');assert.equal(options.headers.Authorization,'Bearer server-secret');return Response.json({full_name:'repo'});}});
+ const handler=createHandler({verify:async()=>({login:'jayyoungjunkim@gmail.com'}),fetcher:async(url,options)=>{calls++;assert.equal(url,'https://api.github.com/repos/jayyoungjun-kim/jayyoungjun-kim.github.io');assert.equal(options.headers.Authorization,'Bearer server-secret');assert.equal(options.redirect,'manual');return Response.json({full_name:'repo'});}});
  const response=await handler(request('/github'),env);assert.equal(response.status,200);assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);assert.ok(!(await response.text()).includes('server-secret'));
  assert.equal((await handler(request('/github','GET',null,'https://evil.invalid'),env)).status,403);assert.equal(calls,1);
  assert.equal((await handler(request('/session'),env)).status,200);
