@@ -80,3 +80,12 @@ test('projects without credits or navigation can create both groups',()=>{
  out=changeStructure(out,p,{action:'add',parent:select(out,p,'participants')[0].id,template:'participant',title:'Person'});
  assert.equal(select(out,p,'participant').length,1);
 });
+
+test('news date spacing follows position after duplication, reordering and deletion',()=>{
+ const p='info.html';let out=read(p);
+ const check=()=>{const dates=[...out.matchAll(/class="(info-section-date(?:-first)?)"/g)].map(m=>m[1]);assert.ok(dates.length>1);assert.equal(dates[0],'info-section-date-first');assert.ok(dates.slice(1).every(c=>c==='info-section-date'));};
+ check();
+ out=changeStructure(out,p,{action:'duplicate',id:select(out,p,'news')[0].id});check();
+ let news=select(out,p,'news');out=changeStructure(out,p,{action:'move',id:news.at(-1).id,target:news[0].id,position:'before'});check();
+ out=changeStructure(out,p,{action:'remove',id:select(out,p,'news')[0].id});check();
+});
