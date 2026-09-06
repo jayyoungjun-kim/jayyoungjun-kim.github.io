@@ -16,7 +16,7 @@ function boot(origin) {
     for(const child of n.childNodes||[])visit(child);
   };visit(parse(html));
   const document={getElementById:id=>{assert.ok(elements.has(id),`Missing element: ${id}`);return elements.get(id);},
-    querySelectorAll:()=>closes,createElement:()=>element()};
+    querySelectorAll:()=>closes,createElement:()=>element(),head:{append(){}}};
   const context={document,location:{origin,hostname:origin==='null'?'':new URL(origin).hostname},
     window:{addEventListener:(name,fn)=>{listeners[name]=fn;}},URL,Blob,TextEncoder,TextDecoder,atob,btoa,
     fetch:()=>{throw new Error('Network access before explicit connection');},setTimeout,clearTimeout,crypto};
@@ -25,17 +25,19 @@ function boot(origin) {
 }
 test('static bundle starts without any account server or network request',()=>{
   const {elements}=boot('https://jayyoungjun-kim.github.io');
-  assert.equal(elements.get('token-form').hidden,false);
-  assert.match(elements.get('connection').textContent,/토큰은 저장/);
+  assert.ok(elements.has('google-login'));
+  assert.ok(!elements.has('token-form'));
+  assert.match(elements.get('connection').textContent,/최초 서비스 설정|불러오고/);
 });
-test('opening the local HTML file shows an online link instead of accepting a token',()=>{
+test('opening the local HTML file refuses authentication',()=>{
   const {elements}=boot('null');
-  assert.equal(elements.get('token-form').hidden,true);
+  assert.ok(!elements.has('token-form'));
   assert.match(elements.get('connection').textContent,/로컬 파일/);
 });
-test('CSP permits only GitHub API connections and the served page uses the bundled script',()=>{
-  assert.ok(html.includes('connect-src https://api.github.com;'));
-  assert.ok(html.includes('script-src \'self\';'));
+test('Google CSP and bundled script exclude direct GitHub credentials',()=>{
+  assert.ok(html.includes('connect-src https://accounts.google.com/gsi/'));
+  assert.ok(!html.includes('github_pat_'));
+  assert.ok(html.includes("script-src 'self' https://accounts.google.com/gsi/client;"));
   assert.ok(html.includes('./app.bundle.js'));
-  assert.ok(!html.includes('accounts.google.com'));
+  assert.ok(html.includes('accounts.google.com'));
 });

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src https://api.github.com; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https:; media-src https: blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self' https://jayyoungjun-kim.github.io; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; connect-src https://accounts.google.com/gsi/ https://jay-portfolio-admin-auth.jay-portfolio-content-admin.workers.dev; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https:; media-src https: blob:; frame-src 'self' blob: https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self' https://jayyoungjun-kim.github.io; form-action 'none'">
   <title>콘텐츠 관리 — Jay Youngjun Kim</title>
   <link rel="stylesheet" href="./admin.css">
 </head>
@@ -15,9 +15,8 @@
   <main id="login" class="login">
     <p class="eyebrow">JAY YOUNGJUN KIM</p><h1>홈페이지 콘텐츠 관리</h1>
     <p>문구와 이미지를 수정하고, 미리 확인한 뒤 발행하세요.</p>
-    <div class="login-box"><h2>GitHub 연결</h2><p>jayyoungjun-kim 계정의 저장소 전용 토큰으로 연결합니다.</p>
-    <form id="token-form" autocomplete="off"><label for="github-token">저장소 접근 토큰</label><input id="github-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" required><button class="primary" type="submit">GitHub 연결</button></form>
-    <details><summary>토큰 발급 방법</summary><ol><li><a href="https://github.com/settings/personal-access-tokens/new?name=Portfolio%20Admin&amp;target_name=jayyoungjun-kim&amp;expires_in=30&amp;contents=write&amp;actions=read" target="_blank" rel="noopener noreferrer">GitHub에서 전용 토큰 만들기 ↗</a></li><li>Only select repositories에서 <strong>jayyoungjun-kim.github.io</strong> 하나만 선택합니다.</li><li>Contents는 Read and write, Actions는 Read-only로 설정합니다.</li><li>발급한 토큰을 위에 입력합니다. GitHub 비밀번호를 입력하지 마세요.</li></ol></details>
+    <div class="login-box"><h2>Google 로그인</h2><p>jayyoungjunkim@gmail.com 계정만 콘텐츠를 관리할 수 있습니다.</p>
+    <div id="google-login"></div>
     <p id="connection" role="status"></p></div>
     <p class="login-note">초안과 선택한 파일은 <strong>이 브라우저에만</strong> 저장됩니다.<br>브라우저 데이터 삭제 시 사라지므로 초안 백업을 보관하세요.<br>발행한 변경사항은 공개 GitHub 저장소에 기록됩니다.</p>
   </main>

@@ -1,24 +1,6 @@
-# GitHub 전용 콘텐츠 어드민
+# Content admin with Google login
 
-## 접속
-
-관리자 주소: https://jayyoungjun-kim.github.io/admin/
-
-기존 홈페이지와 어드민 모두 GitHub Pages에서 실행한다. Cloudflare·Google Cloud 가입이나 서버 설정은 필요 없다. 처음 요청했던 Gmail 로그인 대신, 합의한 GitHub 저장소 전용 토큰으로 연결한다.
-
-로컬 `file://.../admin/index.html` 파일을 직접 열면 온라인 접속 안내를 표시한다. 실제 관리는 위 HTTPS 주소에서 한다. 개발용으로는 `pnpm preview`가 출력한 localhost 주소를 사용한다. 온라인과 localhost의 브라우저 저장 공간은 서로 다르다.
-
-## 최초 연결: 저장소 전용 토큰
-
-1. GitHub에서 `jayyoungjun-kim` 계정으로 로그인한다.
-2. [Fine-grained token 만들기](https://github.com/settings/personal-access-tokens/new?name=Portfolio%20Admin&target_name=jayyoungjun-kim&expires_in=30&contents=write&actions=read)를 연다. 관리자 로그인 화면에도 링크가 있다.
-3. Resource owner는 `jayyoungjun-kim`, Repository access는 **Only select repositories**, 저장소는 **jayyoungjun-kim.github.io** 하나를 선택한다.
-4. Repository permissions: **Contents: Read and write**, **Actions: Read-only**, 기본 **Metadata: Read-only**. Account permissions 추가는 필요 없다.
-5. 만료일을 설정한 뒤 Generate token을 누른다. 발급된 `github_pat_`로 시작하는 값을 관리자 화면의 토큰 칸에 입력한다.
-
-토큰은 사용자가 직접 발급하고 입력한다. 비밀번호나 토큰을 채팅, 소스, 스크린샷에 넣지 않는다. 토큰 입력란은 전송 직후 비워지고 토큰은 메모리에만 보관된다. 탭을 새로 열거나 새로고침하면 다시 연결해야 한다. 토큰이 만료되면 새 토큰으로 연결한다. 필요 없어진 토큰은 GitHub 설정에서 폐기한다.
-
-앱은 GitHub `/user` 응답으로 계정이 `jayyoungjun-kim`인지 확인하고 지정 저장소를 조회한다. 연결 성공만으로 토큰에 쓰기 권한이 있다는 것을 보장하지는 않는다. 발행 시 403이 나오면 선택한 저장소, Contents 권한, 만료 상태와 GitHub 요청 한도를 확인한다. 토큰 권한 자체가 GitHub에서의 접근 범위를 결정한다.
+Complete [Google login setup](google-login-setup.md) before production merge. Sign in at https://jayyoungjun-kim.github.io/admin/ using jayyoungjunkim@gmail.com. GitHub credentials are kept in the Worker secret, never entered in the browser. Local HTML does not support authentication.
 
 ## 콘텐츠 수정
 
@@ -58,11 +40,7 @@
 
 '페이지 내리기'는 프로젝트 HTML을 최신 브랜치에서 제거한다. 먼저 해당 페이지 초안을 정리해야 한다. 홈 카드와 다른 페이지 연결은 별도로 정리한다. 이전 Git 이력과 미디어 파일까지 삭제하는 비공개 전환 기능이 아니다. 복구는 GitHub Desktop에서 관련 콘텐츠 커밋을 revert한 뒤 push한다.
 
-## 개발·배포
 
-- 어드민 소스: `admin/app.js`, `lib/`. 공개 설정: `admin/config.js`.
-- `pnpm build`가 생성하는 `admin/app.bundle.js`를 소스와 함께 커밋한다.
-- 브라우저는 GitHub API 이외 서버에 토큰을 보내지 않는다. CSP로 외부 스크립트를 차단하고 API 연결 대상을 `api.github.com`으로 제한한다.
-- GitHub Pages는 `master` 루트의 기존 배포 설정을 유지한다. `_config.yml`에서 라이브러리·테스트·문서를 웹 빌드에서 제외한다.
-- 기존 홈페이지 파일은 어드민 기능 구축으로 변경하지 않는다.
-- 테스트는 원본 보존, 계정 확인, IndexedDB 저장/동시성, 초안/미리보기/백업/발행 흐름을 검증한다. 자동 테스트의 외부 쓰기 작업은 모의하므로 실제 포트폴리오 콘텐츠를 테스트 목적으로 발행하지 않는다.
+## Development and deployment
+
+See [Google login setup](google-login-setup.md). Rebuild admin/app.bundle.js after source or public config changes. The Worker verifies Google ID tokens and forwards permitted content operations to the fixed GitHub repository.

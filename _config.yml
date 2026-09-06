@@ -10,3 +10,5 @@ exclude:
   - pnpm-lock.yaml
   - pnpm-workspace.yaml
   - README.md
+  - server
+  - wrangler.jsonc

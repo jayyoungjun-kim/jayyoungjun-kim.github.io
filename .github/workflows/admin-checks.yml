@@ -2,7 +2,7 @@ name: Admin checks
 on:
   pull_request:
   push:
-    branches: [master, codex/content-admin]
+    branches: [master, 'codex/**']
 permissions:
   contents: read
 jobs:
@@ -20,4 +20,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
-      - run: git diff --exit-code -- admin/app.bundle.js
+      - run: git diff --exit-code -- admin/app.bundle.js admin/index.html
+      - run: pnpm exec wrangler deploy --dry-run --outdir dist/worker

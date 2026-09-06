@@ -5,3 +5,6 @@ export const REPOSITORY = Object.freeze({
   GITHUB_BRANCH: 'master',
 });
 export const SITE_ORIGIN = 'https://jayyoungjun-kim.github.io';
+
+export const GOOGLE_CLIENT_ID = "660453347503-c0dsbipendf78q18c306jbjq9hs9fh94.apps.googleusercontent.com";
+export const API_ORIGIN = "https://jay-portfolio-admin-auth.jay-portfolio-content-admin.workers.dev";
