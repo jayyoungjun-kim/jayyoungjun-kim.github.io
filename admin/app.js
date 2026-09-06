@@ -153,7 +153,7 @@ async function localImage(path){
 }
 function renderFields(){if(!current)return;
  renderSectionEditor($('fields'),{current,changes,pages,siteOrigin:SITE_ORIGIN,localImage,api,
-  media:id=>openMedia(id),update:updateButtons,upload:id=>{uploadField=id;$('file-upload').click();},
+  media:id=>openMedia(id),update:updateButtons,upload:id=>{uploadField=id;const f=current.fields.find(f=>f.id===id);$('file-upload').accept=['video','source'].includes(f?.tag)&&f?.attribute!=='poster'?'video/mp4':f?.tag==='img'||f?.attribute==='poster'?'image/png,image/jpeg,image/gif,image/webp':'image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4';$('file-upload').click();},
   act:performStructure,add:openAdd,openIntro:()=>run(async()=>{if(await leavePage())await openPage('JavaScript/script.js');})},activeTab);
 }
 async function performStructure(operation){await run(async()=>{
@@ -257,34 +257,40 @@ $('project-form').onsubmit = e => { e.preventDefault(); run(async () => {
 }); };
 $('file-upload').onchange = () => { const file = $('file-upload').files[0]; $('file-upload').value = ''; if (!file) return;
   run(async () => {
-    notice('이미지 용량을 최적화하고 있습니다…');
+    const field=current.fields.find(f=>f.id===uploadField);
+    if(['video','source'].includes(field?.tag)&&field?.attribute!=='poster'&&file.type!=='video/mp4')throw new Error('영상은 MP4 파일로 선택해 주세요.');
+    if((field?.tag==='img'||field?.attribute==='poster')&&!file.type.startsWith('image/'))throw new Error('이미지 파일을 선택해 주세요.');
+    notice(file.type==='video/mp4'?'영상을 저장하고 있습니다…':'이미지 용량을 최적화하고 있습니다…');
     const optimized=await optimizeImage(file);
     const result = await api('/api/uploads', { method: 'POST', body: optimized.file });
     changes[uploadField] = result.url; renderFields(); notice(optimized.note+' · 초안에 연결했습니다. 발행하면 GitHub에 저장됩니다.');
   });
 };
 let mediaItems=[],mediaTarget=null;
+const videoFile=item=>/\.mp4$/i.test(item.name);
 const sizeLabel=size=>size>=1048576?(size/1048576).toFixed(1)+' MB':Math.round(size/1024)+' KB';
 async function openMedia(target=null){
  mediaTarget=target;
+ const field=current?.fields.find(f=>f.id===target);
+ $('media-kind').value=target?(['video','source'].includes(field?.tag)&&field?.attribute!=='poster'?'video':'image'):'all';$('media-kind').disabled=!!target;
  await run(async()=>{mediaItems=(await api('/api/media')).files;$('media-search').value='';renderMedia();$('media-dialog').showModal();});
 }
 function renderMedia(){
  const grid=$('media-grid');grid.replaceChildren();
  const query=$('media-search').value.toLowerCase();
- $('media-status').textContent=mediaItems.length+'개 이미지 · '+(mediaTarget?'선택하면 현재 이미지가 교체됩니다.':'발행한 이미지는 다른 기기에서도 사용할 수 있습니다.');
- for(const item of mediaItems.filter(x=>((x.label||'')+' '+x.name).toLowerCase().includes(query))){
+ $('media-status').textContent=mediaItems.length+'개 파일 · '+(mediaTarget?'선택하면 현재 파일이 교체됩니다.':'발행한 파일은 다른 기기에서도 사용할 수 있습니다.');
+ for(const item of mediaItems.filter(x=>($('media-kind').value==='all'||(videoFile(x)?'video':'image')===$('media-kind').value)&&((x.label||'')+' '+x.name).toLowerCase().includes(query))){
   const card=document.createElement('article');card.className='media-card';
-  const img=document.createElement('img');img.alt=item.label||item.name;img.loading='lazy';img.referrerPolicy='no-referrer';localImage(item.url).then(src=>img.src=src);card.append(img);
+  const img=document.createElement(videoFile(item)?'video':'img');if(videoFile(item)){img.controls=true;img.preload='metadata';img.playsInline=true;img.setAttribute('aria-label',item.label||item.name);}else{img.alt=item.label||item.name;img.loading='lazy';img.referrerPolicy='no-referrer';}localImage(item.url).then(src=>img.src=src);card.append(img);
   const label=document.createElement('p');label.textContent=item.label||item.name;card.append(label);
-  const meta=document.createElement('small');meta.textContent=sizeLabel(item.size)+' · '+(item.published?'GitHub 저장됨':'이 브라우저의 임시 이미지');card.append(meta);
+  const meta=document.createElement('small');meta.textContent=sizeLabel(item.size)+' · '+(item.published?'GitHub 저장됨':'이 브라우저의 임시 파일');card.append(meta);
   const action=(name,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=fn;card.append(b);};
-  if(mediaTarget)action('이 이미지 사용',()=>{changes[mediaTarget]=item.url;$('media-dialog').close();renderFields();updateButtons();});
-  action('주소 복사',async()=>{try{await navigator.clipboard.writeText(new URL(item.url,SITE_ORIGIN).href);$('media-status').textContent='이미지 주소를 복사했습니다.';}catch{$('media-status').textContent=new URL(item.url,SITE_ORIGIN).href;}});
+  if(mediaTarget)action(videoFile(item)?'이 영상 사용':'이 이미지 사용',()=>{changes[mediaTarget]=item.url;$('media-dialog').close();renderFields();updateButtons();});
+  action('주소 복사',async()=>{try{await navigator.clipboard.writeText(new URL(item.url,SITE_ORIGIN).href);$('media-status').textContent='파일 주소를 복사했습니다.';}catch{$('media-status').textContent=new URL(item.url,SITE_ORIGIN).href;}});
   if(!item.published)action('GitHub에 저장',()=>run(async()=>{await api('/api/media',{method:'POST',body:{name:item.name}});mediaItems=(await api('/api/media')).files;renderMedia();}));
   action('삭제',()=>run(async()=>{
-   if(Object.values(changes).some(value=>String(value).includes(item.url)))throw new Error('현재 편집 중인 이미지입니다. 먼저 연결을 변경해 주세요.');
-   if(!window.confirm('이 이미지를 보관함에서 삭제할까요? 페이지나 저장된 초안에서 사용 중이면 삭제되지 않습니다.'))return;
+   if(Object.values(changes).some(value=>String(value).includes(item.url)))throw new Error('현재 편집 중인 파일입니다. 먼저 연결을 변경해 주세요.');
+   if(!window.confirm('이 파일을 보관함에서 삭제할까요? 페이지나 저장된 초안에서 사용 중이면 삭제되지 않습니다.'))return;
    await api('/api/media',{method:'DELETE',body:{name:item.name}});mediaItems=(await api('/api/media')).files;renderMedia();
   }));
   grid.append(card);
@@ -292,11 +298,12 @@ function renderMedia(){
 }
 $('media-library').onclick=()=>openMedia();
 $('media-search').oninput=renderMedia;
-$('media-upload').onclick=()=>$('media-files').click();
+$('media-kind').onchange=renderMedia;
+$('media-upload').onclick=()=>{const kind=$('media-kind').value;$('media-files').accept=kind==='video'?'video/mp4':kind==='image'?'image/png,image/jpeg,image/gif,image/webp':'image/png,image/jpeg,image/gif,image/webp,video/mp4';$('media-files').click();};
 $('media-files').onchange=()=>{const files=[...$('media-files').files];$('media-files').value='';if(!files.length)return;
  run(async()=>{
   for(const [index,file]of files.entries()){
-   $('media-status').textContent=(index+1)+'/'+files.length+' · '+file.name+' 최적화 중…';
+   $('media-status').textContent=(index+1)+'/'+files.length+' · '+file.name+(file.type==='video/mp4'?' 업로드 중…':' 최적화 중…');
    const optimized=await optimizeImage(file);
    const result=await api('/api/uploads',{method:'POST',body:optimized.file});
    await api('/api/media',{method:'POST',body:{name:result.name}});

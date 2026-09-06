@@ -45,3 +45,19 @@ test('asset and library metadata publish atomically without force and preserve o
  assert.equal(JSON.parse(tree[1].content)['other.webp'].label,'Other');
  assert.equal(calls.at(-1).body.force,false);
 });
+test('MP4 upload is listed, published unchanged and protected while used',async()=>{
+ const store=new BrowserStore(new IDBFactory()),admin=new LocalAdmin({},'',{store});
+ let input,publishedSource='';
+ admin.github={media:async()=>({files:[],catalog:{}}),pages:async()=>({head:{sha:'h'},pages:[{path:'work.html'}]}),file:async()=>({source:publishedSource}),
+ publishAsset:async(...args)=>{input=args;return {sha:'s'};}};
+ const file=new File(['0000ftypisom0000'],'Clip.mp4',{type:'video/mp4'});
+ const upload=await admin.request('/api/uploads',{method:'POST',body:file});
+ assert.match(upload.name,/\.mp4$/);
+ assert.equal((await admin.request('/api/media')).files[0].label,'Clip.mp4');
+ await admin.request('/api/media',{method:'POST',body:{name:upload.name}});
+ assert.deepEqual(input[1],new Uint8Array(await file.arrayBuffer()));
+ assert.equal(input[3],'Clip.mp4');
+ publishedSource='<video src="'+upload.url+'"></video>';
+ await assert.rejects(admin.request('/api/media',{method:'DELETE',body:{name:upload.name}}),/work.html/);
+ await assert.rejects(admin.request('/api/uploads',{method:'POST',body:new Blob(['invalid'],{type:'video/mp4'})}),/파일만/);
+});

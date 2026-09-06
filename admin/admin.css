@@ -22,3 +22,5 @@ body{background:#f7f8fa;color:#20242b;font-family:Arial,'Apple SD Gothic Neo','M
 .sync-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;color:#657286;font-size:12px}.sync-strip button{font-size:12px;padding:6px 10px}
 
 .drag-handle{touch-action:none}.block-sorting{cursor:grabbing!important;user-select:none}.block-insertion-slot{flex-shrink:0;clear:both}
+
+.media-card video{display:block;width:100%;height:auto;background:#111;border-radius:6px}.media-controls select{width:auto;max-width:140px}
