@@ -1,3 +1,5 @@
+import {liveStub,liveFile} from './live-content.js';
+export {LiveContent} from './live-content.js';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 const keys=createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 const ORIGIN='https://jayyoungjun-kim.github.io';
@@ -19,6 +21,15 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
  return async(request,env)=>{
   const headers={'Access-Control-Allow-Origin':ORIGIN,'Vary':'Origin','Cache-Control':'no-store','Content-Type':'application/json','X-Content-Type-Options':'nosniff'};
   const reply=(status,error)=>new Response(JSON.stringify({error}),{status,headers});
+  const publicURL=new URL(request.url);
+  if(request.method==='GET'&&publicURL.pathname==='/live/file')return liveFile(request,env,fetcher);
+  if(request.method==='GET'&&['/live/socket','/live/revision'].includes(publicURL.pathname)){
+   if(publicURL.pathname==='/live/socket'&&request.headers.get('Origin')!==ORIGIN)return reply(403,'Invalid origin');
+   if(!env.LIVE_CONTENT)return reply(503,'Live publishing unavailable');
+   const response=await liveStub(env).fetch(new Request('https://live/'+(publicURL.pathname.endsWith('socket')?'socket':'revision'),request));
+   if(response.status===101)return response;
+   return new Response(response.body,{status:response.status,headers:{...headers,'Access-Control-Allow-Origin':'*'}});
+  }
   if(request.headers.get('Origin')!==ORIGIN)return reply(403,'허용되지 않은 관리자 주소입니다.');
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'GET, POST, PATCH, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, X-GitHub-Api-Version','Access-Control-Max-Age':'600'}});
   if(!env.GOOGLE_CLIENT_ID||!env.GITHUB_TOKEN)return reply(503,'관리자 서버 연결 설정이 필요합니다.');
@@ -43,6 +54,10 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
   if(url.pathname==='/session'&&request.method==='GET')return new Response(JSON.stringify(user),{headers});
   if(!url.pathname.startsWith('/github'))return reply(404,'지원하지 않는 요청입니다.');
   const path=url.pathname.slice(7);
+  if(path==='/live-status'&&request.method==='GET'&&env.LIVE_CONTENT){
+   const result=await liveStub(env).fetch('https://live/refresh');
+   return new Response(result.body,{headers});
+  }
   if(!allowedRoute(path,request.method))return reply(403,'지원하지 않는 저장소 작업입니다.');
   let body;
   if(['POST','PATCH'].includes(request.method)){
@@ -58,6 +73,9 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
   try{
    const upstream=await fetcher(`https://api.github.com/repos/${REPO}${path}${url.search}`,{method:request.method,headers:{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'portfolio-admin'},redirect:'manual',...(body?{body:JSON.stringify(body)}:{})});
    if(!upstream.ok)return reply(upstream.status===401?503:upstream.status,'GitHub 연결 권한 또는 원본 변경 여부를 확인해 주세요.');
+   if(path==='/git/refs/heads/master'&&request.method==='PATCH'&&env.LIVE_CONTENT){
+    try{await liveStub(env).fetch('https://live/refresh');}catch{/* Admin status check retries publication notification without another commit. */}
+   }
    return new Response(upstream.body,{status:upstream.status,headers});
   }catch{return reply(502,'GitHub 연결에 실패했습니다. 발행 이력을 확인한 뒤 다시 시도해 주세요.');}
  };

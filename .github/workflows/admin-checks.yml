@@ -20,5 +20,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
+      - run: node scripts/build-pages.js
       - run: git diff --exit-code -- admin/app.bundle.js admin/index.html
       - run: pnpm exec wrangler deploy --dry-run --outdir dist/worker
