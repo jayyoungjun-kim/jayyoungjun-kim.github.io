@@ -9,7 +9,7 @@ export async function authenticate(credential,env,keySet=keys) {
   return {login:EMAIL};
 }
 export function allowedRoute(path,method) {
-  if(method==='GET')return path===''||/^\/git\/(ref\/heads\/master|commits\/[a-f0-9]{40}|trees\/[a-f0-9]{40})$/.test(path)||/^\/contents\/(?:[a-z0-9][a-z0-9-]{0,79}\.html|JavaScript\/script\.js|assets\/uploads\/[a-f0-9-]+\.(?:png|jpg|gif|webp|pdf|mp4))$/.test(path)||path==='/actions/runs';
+  if(method==='GET')return path===''||path==='/contents/assets/uploads/library.json'||/^\/git\/(ref\/heads\/master|commits\/[a-f0-9]{40}|trees\/[a-f0-9]{40})$/.test(path)||/^\/contents\/(?:[a-z0-9][a-z0-9-]{0,79}\.html|JavaScript\/script\.js|assets\/uploads\/[a-f0-9-]+\.(?:png|jpg|gif|webp|pdf|mp4))$/.test(path)||path==='/actions/runs';
   if(method==='POST')return ['/git/blobs','/git/trees','/git/commits'].includes(path);
   return method==='PATCH'&&path==='/git/refs/heads/master';
 }
@@ -36,7 +36,7 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
    const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
    try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return reply(400,'잘못된 요청입니다.');}
    if(path==='/git/refs/heads/master'&&(body.force!==false||!/^[a-f0-9]{40}$/.test(body.sha||'')))return reply(403,'강제 덮어쓰기는 허용되지 않습니다.');
-   if(path==='/git/trees'&&(!Array.isArray(body.tree)||body.tree.some(item=>!(/^[a-z0-9][a-z0-9-]{0,79}\.html$/.test(item.path)||item.path==='JavaScript/script.js'||/^assets\/uploads\/[a-f0-9-]+\.(png|jpg|gif|webp|pdf|mp4)$/.test(item.path))||item.mode!=='100644'||item.type!=='blob'||(item.sha===null&&['index.html','about.html','info.html','JavaScript/script.js'].includes(item.path)))))return reply(403,'허용되지 않은 콘텐츠 경로입니다.');
+   if(path==='/git/trees'&&(!Array.isArray(body.tree)||body.tree.some(item=>!(/^[a-z0-9][a-z0-9-]{0,79}\.html$/.test(item.path)||item.path==='JavaScript/script.js'||item.path==='assets/uploads/library.json'||/^assets\/uploads\/[a-f0-9-]+\.(png|jpg|gif|webp|pdf|mp4)$/.test(item.path))||item.mode!=='100644'||item.type!=='blob'||(item.sha===null&&['index.html','about.html','info.html','JavaScript/script.js'].includes(item.path)))))return reply(403,'허용되지 않은 콘텐츠 경로입니다.');
   }
   try{
    const upstream=await fetcher(`https://api.github.com/repos/${REPO}${path}${url.search}`,{method:request.method,headers:{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'portfolio-admin'},redirect:'manual',...(body?{body:JSON.stringify(body)}:{})});
