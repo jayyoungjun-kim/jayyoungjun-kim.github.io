@@ -1,3 +1,4 @@
+import {bindBlockSort} from './block-sort.js';
 import bundledSiteCSS from '../css/style.css';
 import {canvasDocument} from '../lib/canvas.js';
 let siteCSS=bundledSiteCSS;
@@ -7,7 +8,7 @@ const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls||'
 const btn=(text,fn)=>{const b=el('button','',text);b.type='button';b.onclick=fn;return b;};
 export function disposeVisualCanvas(){cleanup?.();cleanup=null;}
 export function renderVisualCanvas(host,ctx,renderForm,reveal){
- cleanup?.();let disposed=false,timer,observer,bodyObserver,generation=0,intro='',events;
+ cleanup?.();let disposed=false,timer,observer,bodyObserver,generation=0,intro='',events,sortCleanup;
  if(savedPage!==ctx.current.page){savedPage=ctx.current.page;selectedIndex=-1;lastHeight=1000;}
  const all=ctx.current.sections;let selected=all[selectedIndex];if(selected?.kind==='settings')selected=null;
  host.replaceChildren();host.className='visual-workbench';
@@ -31,16 +32,14 @@ export function renderVisualCanvas(host,ctx,renderForm,reveal){
    const action=target.closest('[data-cms-action]');if(action){operate(action.dataset.id,action.dataset.cmsAction);return;}
    const edit=target.closest('[data-cms-edit]');const section=target.closest('[data-editor-section]');const block=target.closest('[data-cms-block]');select(edit?.dataset.cmsEdit||section?.dataset.editorSection||block?.dataset.cmsBlock);
   });
-  let dragged;
-  listen('dragstart',e=>{const h=e.target.closest('[data-cms-drag]');if(!h){e.preventDefault();return;}dragged=h.dataset.cmsDrag;e.dataTransfer.setData('text/plain',dragged);e.dataTransfer.effectAllowed='move';});
-  listen('dragover',e=>{const b=e.target.closest('[data-cms-block]'),s=all.find(x=>x.id===b?.dataset.cmsBlock);if(!dragged||!s?.movable||s.id===dragged)return;e.preventDefault();doc.querySelectorAll('.cms-drop').forEach(n=>n.classList.remove('cms-drop'));b.classList.add('cms-drop');});
-  listen('drop',e=>{e.preventDefault();const b=e.target.closest('[data-cms-block]'),s=all.find(x=>x.id===b?.dataset.cmsBlock);if(dragged&&s?.movable&&s.id!==dragged){const rect=b.getBoundingClientRect();ctx.act({action:'move',id:dragged,target:s.id,position:e.clientY>rect.top+rect.height/2?'after':'before'});}dragged=null;doc.querySelectorAll('.cms-drop').forEach(n=>n.classList.remove('cms-drop'));});
-  listen('dragend',()=>{dragged=null;doc.querySelectorAll('.cms-drop').forEach(n=>n.classList.remove('cms-drop'));});
+  sortCleanup?.();
+  doc.querySelectorAll('[data-cms-drag]').forEach(h=>{h.draggable=false;h.style.touchAction='none';h.style.cursor='grab';});
+  sortCleanup=bindBlockSort({root:doc,handleSelector:'[data-cms-drag]',itemSelector:'[data-cms-block]',canDrop:(from,to)=>{const a=all.find(x=>x.id===from),b=all.find(x=>x.id===to);return a&&b&&a.id!==b.id&&a.movable&&b.movable&&a.parent===b.parent&&(a.kind===b.kind||a.kind==='detail');},commit:(id,target,position)=>ctx.act({action:'move',id,target,position})});
   doc.querySelectorAll('[data-cms-drag]').forEach(h=>h.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();operate(h.dataset.cmsDrag,e.key==='ArrowUp'?'up':'down');}}));
   doc.querySelectorAll('img').forEach(img=>{img.addEventListener('load',fit);img.addEventListener('error',fit);});document.fonts?.ready.then(fit);
   bodyObserver?.disconnect();bodyObserver=new ResizeObserver(fit);bodyObserver.observe(doc.querySelector('.canvas-page'));fit();
  }
- async function draw(){const epoch=++generation;try{let html=canvasDocument(ctx.current.source,ctx.current.page,ctx.changes,ctx.siteOrigin,selected?.id,intro);
+ async function draw(){if(document.body.classList.contains('block-sorting')){clearTimeout(timer);timer=setTimeout(draw,150);return;}const epoch=++generation;try{let html=canvasDocument(ctx.current.source,ctx.current.page,ctx.changes,ctx.siteOrigin,selected?.id,intro);
   const paths=[...new Set(html.match(/\/assets\/uploads\/[a-f0-9-]{36}\.(?:png|jpg|gif|webp|pdf|mp4)/g)||[])];for(const path of paths){const url=await ctx.localImage(path);html=html.replaceAll(path,url);}
   if(disposed||epoch!==generation)return;const parsed=new DOMParser().parseFromString(html,'text/html');
   parsed.querySelectorAll('script,iframe,object,embed,form,svg,math,template').forEach(n=>n.remove());
@@ -53,5 +52,5 @@ export function renderVisualCanvas(host,ctx,renderForm,reveal){
  }catch(e){note.textContent='화면 반영을 기다리는 중: '+e.message;}}
  if(ctx.current.page==='index.html'&&ctx.api)ctx.api('/api/page?page=JavaScript/script.js').then(data=>{if(!disposed){intro=data.fields[0].value;draw();}}).catch(()=>{});
  observer=new ResizeObserver(fit);observer.observe(stage);syncButtons();openForm();draw();
- cleanup=()=>{disposed=true;events?.abort();clearTimeout(timer);observer?.disconnect();bodyObserver?.disconnect();};
+ cleanup=()=>{sortCleanup?.();disposed=true;events?.abort();clearTimeout(timer);observer?.disconnect();bodyObserver?.disconnect();};
 }
