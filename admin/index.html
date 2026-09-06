@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src https://api.github.com; style-src 'self' 'unsafe-inline' https:; img-src https: data: blob:; font-src https:; media-src https: blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self' https://jayyoungjun-kim.github.io; form-action 'none'">
   <title>콘텐츠 관리 — Jay Youngjun Kim</title>
   <link rel="stylesheet" href="./admin.css">
 </head>
@@ -14,23 +15,26 @@
   <main id="login" class="login">
     <p class="eyebrow">JAY YOUNGJUN KIM</p><h1>홈페이지 콘텐츠 관리</h1>
     <p>문구와 이미지를 수정하고, 미리 확인한 뒤 발행하세요.</p>
-    <div class="login-box"><h2>관리자 로그인</h2><p>jayyoungjunkim@gmail.com 계정만 접속할 수 있습니다.</p><div id="google-button"></div><p id="connection" role="status">로그인 연결을 확인하고 있습니다.</p><button id="retry-login" hidden>연결 다시 확인</button></div>
-    <p class="login-note">초안 저장은 홈페이지에 반영되지 않습니다.<br>발행한 변경사항은 GitHub에 기록됩니다.</p>
+    <div class="login-box"><h2>GitHub 연결</h2><p>jayyoungjun-kim 계정의 저장소 전용 토큰으로 연결합니다.</p>
+    <form id="token-form" autocomplete="off"><label for="github-token">저장소 접근 토큰</label><input id="github-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" required><button class="primary" type="submit">GitHub 연결</button></form>
+    <details><summary>토큰 발급 방법</summary><ol><li><a href="https://github.com/settings/personal-access-tokens/new?name=Portfolio%20Admin&amp;target_name=jayyoungjun-kim&amp;expires_in=30&amp;contents=write&amp;actions=read" target="_blank" rel="noopener noreferrer">GitHub에서 전용 토큰 만들기 ↗</a></li><li>Only select repositories에서 <strong>jayyoungjun-kim.github.io</strong> 하나만 선택합니다.</li><li>Contents는 Read and write, Actions는 Read-only로 설정합니다.</li><li>발급한 토큰을 위에 입력합니다. GitHub 비밀번호를 입력하지 마세요.</li></ol></details>
+    <p id="connection" role="status"></p></div>
+    <p class="login-note">초안과 선택한 파일은 <strong>이 브라우저에만</strong> 저장됩니다.<br>브라우저 데이터 삭제 시 사라지므로 초안 백업을 보관하세요.<br>발행한 변경사항은 공개 GitHub 저장소에 기록됩니다.</p>
   </main>
   <main id="workspace" class="workspace" hidden>
     <aside class="sidebar"><div class="sidebar-heading"><h2>페이지</h2><button id="new-project">+ 새 프로젝트</button></div><label class="search-label">페이지 검색<input id="page-search" type="search" placeholder="이름으로 찾기"></label><nav id="pages" aria-label="편집할 페이지"></nav><button id="history" class="history-button">수정 이력 ↗</button></aside>
     <section class="editor" aria-label="콘텐츠 편집">
       <div class="editor-heading"><div><p id="page-path" class="eyebrow">페이지를 선택하세요</p><h1 id="page-title">콘텐츠 편집</h1><p id="draft-status" class="muted"></p></div><div class="actions"><button id="preview" disabled>미리보기</button><button id="save" disabled>초안 저장</button><button id="publish" class="primary" disabled>발행</button></div></div>
-      <div id="conflict" class="warning" hidden>GitHub의 원본이 변경되었습니다. 초안을 덮어쓰지 않았습니다. 초안을 백업하고 최신 원본과 비교한 뒤 다시 편집해 주세요.<div><button id="export-draft">초안 내용 내려받기</button><button id="remote-preview">최신 원본 보기 ↗</button></div></div>
+      <div id="conflict" class="warning" hidden>GitHub의 원본이 변경되었습니다. 초안을 덮어쓰지 않았습니다. 초안을 백업하고 최신 원본과 비교한 뒤 다시 편집해 주세요.<div><button id="remote-preview">최신 원본 보기 ↗</button></div></div>
       <div class="editor-controls"><div id="tabs" class="tabs" role="tablist" aria-label="편집 항목"><button role="tab" aria-selected="true" data-tab="text">문구</button><button role="tab" aria-selected="false" data-tab="media">이미지·영상</button><button role="tab" aria-selected="false" data-tab="link">링크·PDF</button><button role="tab" aria-selected="false" data-tab="meta">검색·공유</button><button role="tab" aria-selected="false" data-tab="blocks">구성·순서</button></div><label class="field-search-label"><span class="sr-only">내용 검색</span><input id="field-search" type="search" placeholder="내용 검색"></label></div>
       <div id="fields" class="fields"><p class="empty">왼쪽에서 편집할 페이지를 선택하세요.</p></div>
-      <div class="editor-footer"><span>기존 페이지의 스타일과 레이아웃을 유지합니다.</span><div><button id="discard" disabled>초안 버리기</button><button id="unpublish" class="danger" hidden>페이지 내리기</button></div></div>
+      <div class="editor-footer"><span>기존 페이지의 스타일과 레이아웃을 유지합니다.</span><div><button id="export-draft" disabled>초안 백업</button><button id="discard" disabled>초안 버리기</button><button id="unpublish" class="danger" hidden>페이지 내리기</button></div></div>
     </section>
   </main>
   <dialog id="preview-dialog"><div class="dialog-heading"><div><h2>발행 전 미리보기</h2><p>분석 태그와 스크립트·영상 임베드는 실행하지 않습니다.</p></div><div><button id="mobile-preview">모바일 폭</button><button data-close="preview-dialog">닫기</button></div></div><div class="preview-stage"><iframe id="preview-frame" title="콘텐츠 미리보기" sandbox=""></iframe></div></dialog>
-  <dialog id="project-dialog"><form id="project-form"><h2>새 프로젝트</h2><p>기존 프로젝트의 레이아웃을 복제해 비공개 초안으로 만듭니다.</p><label>프로젝트 제목<input name="title" required maxlength="180"></label><label>페이지 주소<input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,79}" placeholder="new-project"><small>영문 소문자·숫자·하이픈을 사용하세요. 뒤에 .html이 붙습니다.</small></label><label>레이아웃으로 사용할 프로젝트<select name="template" required></select></label><p class="muted">복제한 본문·이미지·이전/다음 링크를 확인한 뒤 발행하세요. 홈 카드에는 자동으로 추가되지 않습니다.</p><div class="actions"><button type="button" data-close="project-dialog">취소</button><button class="primary" type="submit">초안 만들기</button></div></form></dialog>
+  <dialog id="project-dialog"><form id="project-form"><h2>새 프로젝트</h2><p>기존 프로젝트의 레이아웃을 복제해 이 브라우저의 초안으로 만듭니다.</p><label>프로젝트 제목<input name="title" required maxlength="180"></label><label>페이지 주소<input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,79}" placeholder="new-project"><small>영문 소문자·숫자·하이픈을 사용하세요. 뒤에 .html이 붙습니다.</small></label><label>레이아웃으로 사용할 프로젝트<select name="template" required></select></label><p class="muted">복제한 본문·이미지·이전/다음 링크를 확인한 뒤 발행하세요. 홈 카드에는 자동으로 추가되지 않습니다.</p><div class="actions"><button type="button" data-close="project-dialog">취소</button><button class="primary" type="submit">초안 만들기</button></div></form></dialog>
   <dialog id="confirm-dialog"><h2 id="confirm-title"></h2><p id="confirm-message"></p><div class="actions"><button id="confirm-no">취소</button><button id="confirm-yes" class="primary">확인</button></div></dialog>
   <input id="file-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4" hidden>
-  <script type="module" src="./app.js"></script>
+  <script defer src="./app.bundle.js"></script>
 </body>
 </html>

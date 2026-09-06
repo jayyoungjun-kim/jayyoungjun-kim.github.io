@@ -1,24 +1,24 @@
 # Jay Youngjun Kim portfolio
 
-The existing portfolio remains static HTML/CSS/JavaScript, served by GitHub Pages from `master` at the repository root. Existing public pages and their design are unchanged by the admin implementation.
+The portfolio and `/admin/` both run on GitHub Pages. There is no application server, Google OAuth app, Cloudflare account, runtime secret or external database to configure. Existing public HTML, CSS, URLs and animations are preserved.
 
-`admin/` adds a Korean content editor. `server/` contains a separate Cloudflare Worker which verifies Google ID tokens and allows **only `jayyoungjunkim@gmail.com`**. It stores unpublished drafts in private D1 and uploads in private R2, then publishes an atomic commit to this GitHub repository when requested.
+The administrator connects with a **fine-grained GitHub personal access token** owned by `jayyoungjun-kim`, restricted to this repository. The browser talks directly to `api.github.com`. Tokens live only in the current tab memory and are cleared on disconnect/navigation; they are never stored in source, IndexedDB or backups. This is GitHub token authentication, not Gmail login.
 
-**Activation is not complete.** The Google web client ID, Cloudflare account/resources, Worker GitHub secret and deployed API URL must be configured. The application fails closed until they are present. No default password, test login or client-side authentication bypass exists.
+Drafts and selected upload files are stored in IndexedDB in the current browser, not in a cloud account. They do not sync across browsers or devices and may be lost if browser data is cleared. A draft backup downloads the current HTML and pending file contents as JSON for manual recovery. There is no automatic backup import or server-side private draft storage.
 
-See [the activation and operations guide](docs/admin-setup.md).
+See [setup and daily operations](docs/admin-setup.md).
 
 ```sh
 pnpm install
 pnpm test
-pnpm build          # Validates the Worker bundle without deploying
-pnpm preview        # Static admin at http://127.0.0.1:8080/admin/
+pnpm build
+pnpm preview  # http://127.0.0.1:8080/admin/
 ```
 
-Node.js 24 and pnpm 11 are used. The checked-in lockfile is the dependency baseline.
+Node.js 24 and pnpm 11 are used for development only. The generated `admin/app.bundle.js` is checked in so the existing GitHub Pages branch deployment can serve it without an application build step. CI verifies tests and bundle reproducibility. Rebuild and commit the bundle whenever admin source changes.
 
-The admin edits text and selected URL/metadata attributes at their original HTML source positions. It does not regenerate the public page DOM, change CSS/classes, or migrate to a frontend framework. A no-op edit round-trips every original page byte-for-byte. Repeatable existing content blocks can be duplicated, reordered or removed; new projects can reuse an existing project layout. The English home typewriter sentence has a dedicated content editor.
+The editor patches text and selected metadata/URL attributes at original source offsets. It does not regenerate the public DOM or change CSS/classes. Existing blocks can be duplicated, reordered and removed; a new project can reuse an existing project's layout. The home typewriter sentence has its own editor. No-op edits round-trip existing source byte-for-byte.
 
-Drafts are private; publishing makes the HTML and uploaded files public in GitHub and Pages. Hiding a home card does not unpublish the linked page. Unpublishing removes its current HTML file; it does not erase public Git history or uploaded media.
+Publishing creates one commit containing the page and its new assets on `master`. A page SHA check and a non-forced ref update prevent overwriting concurrent GitHub Desktop edits. GitHub commit success and Pages deployment status are reported separately. Hiding a card does not unpublish its page; unpublishing does not erase public Git history or uploaded files.
 
-Tests cover content preservation, injection prevention, Google token verification and email authorization, private drafts, optimistic concurrency and atomic publishing. GitHub and identity checks are mocked or use locally signed test keys where external account configuration is required; a successful live login/publish still needs to be verified after activation.
+Tests cover content preservation, markup/URL safety, account verification, IndexedDB persistence/concurrency, local drafts and uploads, credential-free backups and atomic publishing. External write operations are mocked in automated tests; no portfolio content is changed for testing.

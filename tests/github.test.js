@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GitHub, isPage, toBase64 } from '../server/github.js';
+import { GitHub, isPage, toBase64 } from '../lib/github.js';
 const sha = 'a'.repeat(40), fileSha='b'.repeat(40);
 const env={GITHUB_TOKEN:'not-a-real-token',GITHUB_OWNER:'jayyoungjun-kim',GITHUB_REPO:'jayyoungjun-kim.github.io',GITHUB_BRANCH:'master'};
 function transport(race=false) {

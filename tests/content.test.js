@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { parse } from 'parse5';
-import { inspect, applyEdits, changeBlock, cloneProject, preview, INTRO_PATH } from '../server/content.js';
+import { inspect, applyEdits, changeBlock, cloneProject, preview, INTRO_PATH } from '../lib/content.js';
 const root = new URL('../', import.meta.url);
 const source = page => readFile(new URL(page, root), 'utf8');
 

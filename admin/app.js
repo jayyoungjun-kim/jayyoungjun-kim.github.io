@@ -1,25 +1,27 @@
-import { API_ORIGIN } from './config.js';
+import { REPOSITORY, SITE_ORIGIN } from './config.js';
+import { LocalAdmin } from '../lib/service.js';
+const service = new LocalAdmin(REPOSITORY, SITE_ORIGIN);
 
 const $ = id => document.getElementById(id);
-let token = '', config, pages = [], current = null, changes = {}, activeTab = 'text', busy = false, uploadField;
-let expiryTimer, pollingTimer;
+let token = false, pages = [], current = null, changes = {}, activeTab = 'text', busy = false, uploadField;
+let pollingTimer;
 const objectURLs = new Set();
 const names = { 'index.html': 'HOME', 'about.html': 'ABOUT', 'info.html': 'INFO', 'JavaScript/script.js': '홈 타이핑 소개' };
 const core = path => path in names;
-const apiOrigin = API_ORIGIN.replace(/\/$/, '');
+
 
 function notice(message, error = false) { $('notice').textContent = message; $('notice').className = error ? 'error' : ''; }
 function dirty() { return Object.keys(changes).length > 0; }
 function updateButtons() {
   const disabled = busy || !token || !current;
-  for (const id of ['save', 'preview']) $(id).disabled = disabled;
+  for (const id of ['save', 'preview', 'export-draft']) $(id).disabled = disabled;
   $('publish').disabled = disabled || (!dirty() && !current?.revision) || current?.conflict;
   $('discard').disabled = disabled || !current?.revision;
   $('unpublish').hidden = !current || core(current.page) || !current.baseSha;
   $('unpublish').disabled = disabled || current?.conflict || !!current?.revision || dirty();
   $('unpublish').title = '저장한 초안과 미저장 내용을 먼저 정리한 뒤 페이지를 내릴 수 있습니다.';
   if (current) $('draft-status').textContent = dirty() ? '저장하지 않은 변경사항이 있습니다.' : current.revision ?
-    `비공개 초안 · ${new Date(current.updatedAt).toLocaleString('ko-KR')}` : '현재 발행된 내용';
+    `이 브라우저의 초안 · ${new Date(current.updatedAt).toLocaleString('ko-KR')}` : '현재 발행된 내용';
 }
 async function run(fn) {
   if (busy) return;
@@ -34,61 +36,41 @@ async function run(fn) {
   finally { busy = false; $('workspace').inert = false; $('project-form').inert = false; $('logout').disabled = false; controls.forEach((el, i) => el.disabled = disabled[i]); updateButtons(); }
 }
 async function api(path, options = {}) {
-  const headers = new Headers(options.headers);
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  if (options.body && typeof options.body !== 'string' && !(options.body instanceof Blob)) {
-    headers.set('Content-Type', 'application/json'); options.body = JSON.stringify(options.body);
+  try { return await service.request(path, options); }
+  catch (e) {
+    if (e.status === 401) showLogin(true);
+    if (e instanceof TypeError) throw new Error('GitHub에 연결하지 못했습니다. 발행 중이었다면 수정 이력에서 반영 여부를 먼저 확인해 주세요.');
+    throw e;
   }
-  let response;
-  try { response = await fetch(apiOrigin + path, { ...options, headers, credentials: 'omit', cache: 'no-store' }); }
-  catch { throw new Error('서버에 연결하지 못했습니다. 연결 상태를 확인해 주세요. 발행 중이었다면 수정 이력에서 반영 여부를 먼저 확인해 주세요.'); }
-  if (!response.ok) {
-    const result = await response.json().catch(() => ({}));
-    if (response.status === 401) showLogin(true);
-    throw new Error(result.error || `요청을 완료하지 못했습니다. (${response.status})`);
-  }
-  return options.blob ? response.blob() : response.json();
 }
 function showLogin(expired = false) {
-  token = ''; clearTimeout(expiryTimer);
+  token = false; service.disconnect();
   $('login').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
   $('account').textContent = '';
-  if (expired) notice('로그인이 만료되었습니다. 다시 로그인하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
+  if (expired) notice('연결이 해제되었습니다. 토큰을 다시 입력하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
   updateButtons();
 }
 async function login(credential) {
   await run(async () => {
-    token = credential;
     try {
-      const user = await api('/api/session');
-      $('account').textContent = user.email;
+      const user = await service.connect(credential);
+      credential = '';
+      token = true;
+      $('account').textContent = user.login;
       $('login').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
-      clearTimeout(expiryTimer);
-      expiryTimer = setTimeout(() => showLogin(true), Math.max(0, user.expiresAt * 1000 - Date.now() - 10000));
       await loadPages();
       if (!current) await openPage('index.html');
-      notice('로그인했습니다. 초안은 발행하기 전까지 공개되지 않습니다.');
-    } catch (e) { token = ''; throw e; }
+      notice('GitHub에 연결했습니다. 초안은 이 브라우저에만 저장됩니다.');
+    } catch (e) { showLogin(); throw e; }
   });
 }
-async function setup() {
-  $('retry-login').hidden = true;
-  try {
-    if (!apiOrigin) throw new Error('관리 서버 연결을 준비 중입니다. Google 로그인과 GitHub 발행 연결이 완료되면 이곳에서 관리할 수 있습니다.');
-    const u = new URL(apiOrigin);
-    if (u.protocol !== 'https:' && !['127.0.0.1', 'localhost'].includes(u.hostname)) throw new Error('관리 서버에는 HTTPS 주소가 필요합니다.');
-    config = await api('/api/config');
-    if (!config.ready) throw new Error('관리 서버의 Google 로그인·발행·초안 저장 연결이 아직 완료되지 않았습니다.');
-    if (!window.google?.accounts) await new Promise((resolve, reject) => {
-      const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
-      s.onload = resolve; s.onerror = () => { s.remove(); reject(new Error('Google 로그인을 불러오지 못했습니다. 다시 시도해 주세요.')); };
-      document.head.append(s);
-    });
-    google.accounts.id.initialize({ client_id: config.clientId, callback: result => login(result.credential), auto_select: false });
-    $('google-button').replaceChildren();
-    google.accounts.id.renderButton($('google-button'), { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', locale: 'ko' });
-    $('connection').textContent = 'Google 계정으로 로그인해 주세요.';
-  } catch (e) { $('connection').textContent = e.message; $('retry-login').hidden = false; }
+function setup() {
+  const supported = location.origin === SITE_ORIGIN || ['localhost', '127.0.0.1'].includes(location.hostname);
+  $('token-form').hidden = !supported;
+  if (!supported) {
+    $('connection').textContent = '관리자 화면은 아래 홈페이지 주소에서 열어 주세요. 로컬 파일에서는 연결할 수 없습니다.';
+    const a = document.createElement('a'); a.href = SITE_ORIGIN + '/admin/'; a.textContent = '온라인 관리자 화면 열기 ↗'; $('connection').append(document.createElement('br'), a);
+  } else $('connection').textContent = '연결할 때마다 토큰을 입력합니다. 토큰은 저장하거나 백업하지 않습니다.';
 }
 async function loadPages() { pages = (await api('/api/pages')).pages; renderPages(); }
 function renderPages() {
@@ -191,11 +173,11 @@ function confirmAction(title, message, label = '확인') {
   });
 }
 
-$('retry-login').onclick = setup;
+$('token-form').onsubmit = e => { e.preventDefault(); if(busy)return; const credential=$('github-token').value.trim(); $('github-token').value=''; login(credential); };
 $('logout').onclick = async () => {
   if (busy) return;
   if (!await leavePage()) return;
-  google.accounts.id.disableAutoSelect(); clearTimeout(pollingTimer);
+  clearTimeout(pollingTimer);
   current = null; changes = {}; pages = []; $('preview-frame').srcdoc = ''; $('fields').replaceChildren(); $('pages').replaceChildren();
   for (const u of objectURLs) URL.revokeObjectURL(u); objectURLs.clear(); showLogin(); notice('로그아웃했습니다.');
 };
@@ -261,15 +243,18 @@ $('file-upload').onchange = () => { const file = $('file-upload').files[0]; $('f
   run(async () => {
     if (file.size > 8*1024*1024) throw new Error('파일은 8MB 이하로 업로드해 주세요. 큰 영상은 외부 영상 주소로 연결할 수 있습니다.');
     const result = await api('/api/uploads', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
-    changes[uploadField] = result.url; renderFields(); notice('파일을 비공개로 업로드했습니다. 초안을 저장하고 발행하면 공개됩니다.');
+    changes[uploadField] = result.url; renderFields(); notice('파일을 이 브라우저에 저장했습니다. 발행하면 GitHub에 업로드됩니다.');
   });
 };
 $('history').onclick = () => window.open('https://github.com/jayyoungjun-kim/jayyoungjun-kim.github.io/commits/master/', '_blank', 'noopener');
 $('remote-preview').onclick = () => window.open(`https://jayyoungjun-kim.github.io/${current.page === 'JavaScript/script.js' ? 'index.html' : current.page}`, '_blank', 'noopener');
-$('export-draft').onclick = () => {
-  const content = { page: current.page, baseSha: current.baseSha, savedAt: new Date().toISOString(), fields: current.fields.map(f => ({ label: f.label, id: f.id, value: changes[f.id] ?? f.value })) };
+$('export-draft').onclick = () => run(async () => {
+  const content = await api(`/api/backup?page=${encodeURIComponent(current.page)}`, {method:'POST',body:payload()});
   const url = URL.createObjectURL(new Blob([JSON.stringify(content,null,2)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `${current.page.replaceAll('/','-')}-draft.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
+  notice('초안과 연결된 임시 파일을 백업했습니다. 토큰은 포함되지 않습니다.');
+});
+window.addEventListener('pagehide', () => { service.disconnect(); token=false; });
+window.addEventListener('pageshow', e => { if(e.persisted)showLogin(true); });
 window.addEventListener('beforeunload', e => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
-await setup();
+setup();
