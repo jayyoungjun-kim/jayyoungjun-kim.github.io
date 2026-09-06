@@ -1,3 +1,4 @@
+import {cleanRich} from '../lib/rich-text.js';
 import { allowedTemplates, templateNames } from '../lib/sections.js';
 let pendingSelection;
 export function revealSection(id){pendingSelection=id;}
@@ -11,7 +12,7 @@ export function fieldLabel(f){
  const l=f.label;
  if(/og:title/.test(l))return '공유 제목';if(/description/.test(l))return '검색 · 공유 설명';if(/og:type/.test(l))return '콘텐츠 유형';
  if(/list title/.test(l))return '작업 제목';if(/list category/.test(l))return '작업 분류';if(/main content title/.test(l))return '카테고리 이름';
- if(/date/.test(l))return '날짜';if(/footnote/.test(l))return '각주';if(/body.*kr|profile kr/.test(l))return '본문 · 한국어';if(/body.*en|profile en/.test(l))return '본문 · English';
+ if(/footnote/.test(l))return '캡션';if(/date/.test(l))return '날짜';if(/footnote/.test(l))return '각주';if(/body.*kr|profile kr/.test(l))return '본문 · 한국어';if(/body.*en|profile en/.test(l))return '본문 · English';
  if(/title/.test(l))return '제목';if(/spec/.test(l))return '프로젝트 정보';if(/label/.test(l))return '소제목';if(/footer/.test(l))return '하단 문구';if(/menu/.test(l))return '메뉴 이름';if(/download/.test(l))return '다운로드 이름';if(/link/.test(l))return '링크 이름';if(/badge/.test(l))return '상태 표시';if(/header j/.test(l))return '첫 화면 이니셜';
  return f.type==='meta'?'페이지 제목':'내용';
 }
@@ -54,7 +55,7 @@ export function renderSectionEditor(host,ctx,mode='content'){
   const number=s.kind==='detail'?String(all.filter(x=>x.kind==='detail').indexOf(s)+1).padStart(2,'0')+' · ':'';
   const b=button(number+s.title,()=>select(s),'section-select');b.setAttribute('aria-current',String(selected?.id===s.id));r.append(b);dropZone(r,s);outline.append(r);
   // Fine-grained content blocks are edited inline, so the outline stays short.
-  for(const k of s.children){const child=all.find(x=>x.id===k);if(child.kind!=='part')row(child,depth+1);}
+  for(const k of s.children){const child=all.find(x=>x.id===k);if(!['part','detailPart'].includes(child.kind))row(child,depth+1);}
  }
  visible.filter(s=>!s.parent).forEach(s=>row(s,0));
  if(mode==='content'&&current.rootKinds?.length)outline.append(button(page==='index.html'?'+ 카테고리 추가':'+ 섹션 추가',()=>ctx.add(null,current.rootKinds),'add-outline'));
@@ -71,6 +72,19 @@ export function renderSectionEditor(host,ctx,mode='content'){
    const wrap=el('div','edit-field');const label=el('label','field-label',fieldLabel(f));label.htmlFor=f.id;wrap.append(label);
    const value=changes[f.id]??f.value;
    if(f.type==='media'&&f.url&&f.tag==='img')imagePreview(value,wrap);
+   if(f.rich&&/title|date|label/.test(f.label)&&!value.includes('<a ')){
+    const input=el('input');input.id=f.id;input.value=f.plain??value;input.oninput=()=>{const next=input.value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');if(next===f.value)delete changes[f.id];else changes[f.id]=next;update();};if(changes[f.id]!==undefined)input.value=changes[f.id].replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&amp;','&');wrap.append(input);container.append(wrap);continue;
+   }
+   if(f.rich){
+    const editor=el('div','rich-editor');editor.contentEditable='true';editor.setAttribute('role','textbox');editor.setAttribute('aria-multiline','true');editor.setAttribute('aria-label',fieldLabel(f));editor.id=f.id;editor.innerHTML=value;
+    const changed=()=>{const next=cleanRich(editor.innerHTML);if(next===f.value)delete changes[f.id];else changes[f.id]=next;update();};
+    const toolbar=el('div','rich-toolbar');
+    for(const [name,command]of [['굵게','bold'],['기울임','italic'],['목록','insertUnorderedList'],['링크 해제','unlink']]){const b=button(name,()=>{editor.focus();document.execCommand(command);changed();},'quiet');b.onmousedown=e=>e.preventDefault();toolbar.append(b);}
+    const link=button('링크',()=>{const href=window.prompt('연결할 주소를 입력하세요. 글을 선택한 상태에서 링크를 연결할 수 있습니다.','https://');if(!href)return;try{cleanRich('<a href="'+href.replaceAll('"','&quot;')+'">링크</a>');editor.focus();document.execCommand('createLink',false,href);changed();}catch{window.alert('올바른 웹 주소 또는 이메일 주소를 입력해 주세요.');}},'quiet');link.onmousedown=e=>e.preventDefault();toolbar.append(link);
+    editor.oninput=changed;editor.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();document.execCommand('insertLineBreak');changed();}};
+    editor.onpaste=e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));changed();};
+    wrap.append(toolbar,editor);container.append(wrap);continue;
+   }
    const long=f.type==='text'&&value.length>65||/본문|각주|설명/.test(fieldLabel(f))&&!f.url;const input=el(long?'textarea':'input');input.id=f.id;input.value=value;if(long)input.rows=Math.min(12,Math.max(3,Math.ceil(value.length/75)));
    input.oninput=()=>{if(input.value===f.value)delete changes[f.id];else changes[f.id]=input.value;update();};wrap.append(input);
    if(f.url&&f.tag!=='iframe'){const tools=el('div','field-tools');tools.append(button(['img','video','source'].includes(f.tag)?'파일 선택 · 교체':'파일 연결',()=>upload(f.id),'upload'));
@@ -86,12 +100,14 @@ export function renderSectionEditor(host,ctx,mode='content'){
  }
  for(const childId of selected.children){const child=all.find(s=>s.id===childId);
   if(child.kind==='part'){
-   const box=el('section','inline-block');const h=el('div','inline-heading');h.append(handle(child),el('h3','',fieldLabel(current.fields.find(f=>f.id===child.fieldIds[0])||{label:'',type:'text'})),actions(child));box.append(h);fieldsFor(child,box);dropZone(box,child);inspector.append(box);
+   const box=el('section','semantic-field');fieldsFor(child,box);const more=el('details','field-options');more.append(el('summary','','항목 구성'),actions(child));box.append(more);inspector.append(box);
+  }else if(child.kind==='detailPart'){
+   const box=el('section','inline-block');const h=el('div','inline-heading');h.append(handle(child),el('h3','',child.thumbnail?'이미지':fieldLabel(current.fields.find(f=>f.id===child.fieldIds[0])||{label:'',type:'text'})),actions(child));box.append(h);fieldsFor(child,box);dropZone(box,child);inspector.append(box);
   }else{
-   const card=el('article',child.kind==='card'?'work-card':'child-card');const h=el('div','child-heading');h.append(handle(child),button(child.title,()=>select(child),'child-title'),actions(child));card.append(h);if(child.kind==='card')imagePreview(child.thumbnail,card);else card.append(el('p','child-summary',descendants(child).flatMap(s=>s.fieldIds).map(id=>current.fields.find(f=>f.id===id)).filter(f=>f?.type==='text').map(f=>f.value).join(' ').slice(0,180)));card.append(button('내용 편집 →',()=>select(child),'edit-child'));dropZone(card,child);inspector.append(card);
+   const card=el('article',child.kind==='card'?'work-card':'child-card');const h=el('div','child-heading');h.append(handle(child),button(child.title,()=>select(child),'child-title'),actions(child));card.append(h);if(child.kind==='card')imagePreview(child.thumbnail,card);else card.append(el('p','child-summary',descendants(child).flatMap(s=>s.fieldIds).map(id=>current.fields.find(f=>f.id===id)).filter(f=>f?.type==='text').map(f=>f.plain??f.value).join(' ').slice(0,180)));card.append(button('내용 편집 →',()=>select(child),'edit-child'));dropZone(card,child);inspector.append(card);
   }
  }
  const choices=allowedTemplates(selected,page);if(choices.length)inspector.append(button(selected.kind==='category'?'+ 작업 카드 추가':'+ 내용 블록 추가',()=>ctx.add(selected,choices),'add-block'));
  if(selected.kind==='card')inspector.append(el('p','editor-tip','카드는 홈 화면의 썸네일입니다. 상세 페이지 본문은 왼쪽 프로젝트 메뉴에서 편집하세요.'));
- if(selected.kind==='detail'&&!selected.fieldIds.length)inspector.append(el('p','muted','여백 또는 구분을 위한 섹션입니다. 순서를 바꾸거나 삭제할 수 있습니다.'));
+ if(selected.kind==='detail')inspector.append(el('p','muted','이미지와 텍스트는 하나의 섹션으로 함께 이동합니다. 아래 추가 버튼으로 이미지나 설명을 더 넣을 수 있습니다.'));
 }

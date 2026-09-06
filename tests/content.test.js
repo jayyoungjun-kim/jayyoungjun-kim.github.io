@@ -19,11 +19,11 @@ test('all original pages round-trip unchanged, including original formatting', a
 });
 test('edits only the selected text range, escaping active markup and keeping styling', async () => {
   const html = await source('info.html');
-  const f = inspect(html,'info.html').fields.find(f => f.kind === 'text' && f.label.includes('body kr'));
+  const f = inspect(html,'info.html').fields.find(f => f.kind === 'rich' && f.label.includes('body kr'));
   const edited = applyEdits(html,'info.html',{ [f.id]:'새 소개 <script>alert(1)</script> & "인용"' });
   assert.equal(edited.slice(0,f.start), html.slice(0,f.start));
   assert.ok(edited.endsWith(html.slice(f.end)));
-  assert.ok(edited.includes('&lt;script&gt;alert(1)&lt;/script&gt; &amp;'));
+  assert.ok(!edited.includes('<script>alert(1)</script>'));assert.ok(edited.includes('새 소개  &amp;'));
   assert.throws(() => applyEdits(html, 'info.html', { fake:'x' }), { status:422 });
 });
 test('URL edits reject script/data URLs and unsafe embedded hosts', async () => {
