@@ -13,6 +13,8 @@ export function allowedRoute(path,method) {
   if(method==='POST')return ['/git/blobs','/git/trees','/git/commits'].includes(path);
   return method==='PATCH'&&path==='/git/refs/heads/master';
 }
+const sessionPattern=/^ps_[a-f0-9]{64}$/;
+async function sessionKey(token){return 'session:'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');}
 export function createHandler({verify=authenticate,fetcher=fetch}={}) {
  return async(request,env)=>{
   const headers={'Access-Control-Allow-Origin':ORIGIN,'Vary':'Origin','Cache-Control':'no-store','Content-Type':'application/json','X-Content-Type-Options':'nosniff'};
@@ -21,8 +23,23 @@ export function createHandler({verify=authenticate,fetcher=fetch}={}) {
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'GET, POST, PATCH, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, X-GitHub-Api-Version','Access-Control-Max-Age':'600'}});
   if(!env.GOOGLE_CLIENT_ID||!env.GITHUB_TOKEN)return reply(503,'관리자 서버 연결 설정이 필요합니다.');
   const credential=request.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
-  let user;try{user=await verify(credential,env);}catch{return reply(401,'허용된 Google 계정으로 다시 로그인해 주세요.');}
+  let user;const persistent=sessionPattern.test(credential||'');
+  try{
+   if(persistent){const row=await env.ADMIN_SESSIONS?.get(await sessionKey(credential),'json');if(row?.login!==EMAIL)throw Error();user={login:EMAIL};}
+   else user=await verify(credential,env);
+  }catch{return reply(401,'허용된 Google 계정으로 다시 로그인해 주세요.');}
   const url=new URL(request.url);
+  if(url.pathname==='/session'&&request.method==='POST'){
+   if(!env.ADMIN_SESSIONS)return reply(503,'로그인 유지 저장소 설정이 필요합니다.');
+   if(persistent)return reply(400,'Google 로그인으로 세션을 생성해 주세요.');
+   const token='ps_'+Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+   await env.ADMIN_SESSIONS.put(await sessionKey(token),JSON.stringify({login:user.login,createdAt:new Date().toISOString()}));
+   return new Response(JSON.stringify({...user,sessionToken:token}),{headers});
+  }
+  if(url.pathname==='/logout'&&request.method==='POST'){
+   if(persistent)await env.ADMIN_SESSIONS.delete(await sessionKey(credential));
+   return new Response(JSON.stringify({ok:true}),{headers});
+  }
   if(url.pathname==='/session'&&request.method==='GET')return new Response(JSON.stringify(user),{headers});
   if(!url.pathname.startsWith('/github'))return reply(404,'지원하지 않는 요청입니다.');
   const path=url.pathname.slice(7);

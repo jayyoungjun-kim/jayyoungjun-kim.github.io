@@ -9,5 +9,11 @@
   "observability": {
     "enabled": false
   },
-  "account_id": "9b6458b406f20dd0542b87b2e07963f1"
+  "account_id": "9b6458b406f20dd0542b87b2e07963f1",
+  "kv_namespaces": [
+    {
+      "binding": "ADMIN_SESSIONS",
+      "id": "302422c2e35b423a9d435ced56dc530c"
+    }
+  ]
 }

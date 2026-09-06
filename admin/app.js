@@ -55,6 +55,7 @@ function showLogin(expired = false) {
   token = false; syncEpoch++;liveSync?.stop();service.disconnect();
   $('login').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
   $('account').textContent = '';
+  if(expired)service.forgetSession();
   if (expired) notice('연결이 해제되었습니다. Google로 다시 로그인하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
   updateButtons();
 }
@@ -68,7 +69,7 @@ async function login(credential) {
       $('login').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;refreshSidebar?.();
       await loadPages();
       if (!current) await openPage('index.html');
-      notice('Google로 로그인했습니다. 초안은 이 브라우저에만 저장됩니다.');
+      notice('로그인 유지 중 · 새로고침해도 로그인 상태가 유지됩니다. 초안은 이 브라우저에 저장됩니다.');
       startSync();
     } catch (e) { showLogin(); throw e; }
   });
@@ -84,6 +85,7 @@ function setup() {
   script.onload=()=>{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:result=>login(result.credential),auto_select:false});google.accounts.id.renderButton($('google-login'),{type:'standard',theme:'outline',size:'large',text:'signin_with'});$('connection').textContent='jayyoungjunkim@gmail.com 계정으로 로그인하세요.';};
   script.onerror=()=>{$('connection').textContent='Google 로그인 버튼을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.';};
   document.head.append(script);
+  if(service.savedSession())login();
 }
 function startSync(){
  syncEpoch++;liveSync?.stop();
@@ -194,6 +196,7 @@ function confirmAction(title, message, label = '확인') {
 $('logout').onclick = async () => {
   if (busy) return;
   if (!await leavePage()) return;
+  try{await service.logout();}catch(e){notice(e.message,true);return;}
   clearTimeout(pollingTimer);
   current = null; changes = {}; pages = []; imageCache.clear(); $('preview-frame').srcdoc = ''; $('fields').replaceChildren(); $('pages').replaceChildren();
   for (const u of objectURLs) URL.revokeObjectURL(u); objectURLs.clear(); showLogin(); notice('로그아웃했습니다.');

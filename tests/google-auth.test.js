@@ -34,15 +34,35 @@ test('proxy rejects arbitrary endpoints, force pushes, core deletion and code wr
 
 test('Google client routes session and GitHub calls through Worker and clears credentials on disconnect',async()=>{
  const {GoogleAdmin}=await import('../lib/google-service.js');
- const original=globalThis.fetch,calls=[];
- globalThis.fetch=async(url,options)=>{calls.push({url,options});return Response.json(url.endsWith('/session')?{login:'jayyoungjunkim@gmail.com'}:{full_name:'jayyoungjun-kim/jayyoungjun-kim.github.io'});};
+ const original=globalThis.fetch,originalStorage=globalThis.localStorage,calls=[],saved=new Map(),sessionToken='ps_'+'a'.repeat(64);
+ globalThis.localStorage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
+ globalThis.fetch=async(url,options)=>{calls.push({url,options});return Response.json(url.endsWith('/session')?{login:'jayyoungjunkim@gmail.com',sessionToken}:{full_name:'jayyoungjun-kim/jayyoungjun-kim.github.io'});};
  try{
   const admin=new GoogleAdmin({GITHUB_OWNER:'jayyoungjun-kim',GITHUB_REPO:'jayyoungjun-kim.github.io',GITHUB_BRANCH:'master'},origin,'https://worker.invalid');
   admin.store={ready:Promise.resolve()};
   await admin.connect('google-proof');
   assert.deepEqual(calls.map(c=>c.url),['https://worker.invalid/session','https://worker.invalid/github']);
-  assert.ok(calls.every(c=>c.options.headers.Authorization==='Bearer google-proof'));
+  assert.equal(calls[0].options.method,'POST');assert.equal(calls[0].options.headers.Authorization,'Bearer google-proof');assert.equal(calls[1].options.headers.Authorization,'Bearer '+sessionToken);
+  assert.ok(![...saved.values()].includes('google-proof'));
   const github=admin.github;admin.disconnect();assert.equal(github.env.GITHUB_TOKEN,'');assert.equal(admin.github,null);
+  await admin.connect();assert.equal(calls[2].options.method,'GET');assert.equal(calls[2].options.headers.Authorization,'Bearer '+sessionToken);
+  await admin.logout();assert.equal(saved.size,0);assert.equal(admin.github,null);
   globalThis.fetch=async()=>new Response('',{status:401});await assert.rejects(admin.connect('expired'));assert.equal(admin.github,null);
- }finally{globalThis.fetch=original;}
+ }finally{globalThis.fetch=original;globalThis.localStorage=originalStorage;}
+});
+
+test('persistent sessions survive Google expiry, store only hashes, and revoke on logout',async()=>{
+ const data=new Map();let googleValid=true;
+ const configured={...env,ADMIN_SESSIONS:{get:async k=>data.has(k)?JSON.parse(data.get(k)):null,put:async(k,v,opts)=>{assert.equal(opts,undefined);data.set(k,v);},delete:async k=>data.delete(k)}};
+ const handler=createHandler({verify:async()=>{if(!googleValid)throw Error();return{login:'jayyoungjunkim@gmail.com'};},fetcher:async()=>Response.json({ok:true})});
+ const issued=await handler(request('/session','POST'),configured);assert.equal(issued.status,200);
+ const {sessionToken}=await issued.json();assert.match(sessionToken,/^ps_[a-f0-9]{64}$/);assert.ok(![...data.keys(),...data.values()].join('').includes(sessionToken));
+ googleValid=false;
+ const sessionRequest=(path,method='GET',token=sessionToken)=>new Request('https://worker.invalid'+path,{method,headers:{Origin:origin,Authorization:'Bearer '+token}});
+ assert.equal((await handler(sessionRequest('/session'),configured)).status,200);
+ assert.equal((await handler(sessionRequest('/github'),configured)).status,200);
+ assert.equal((await handler(sessionRequest('/session','GET','ps_'+'f'.repeat(64)),configured)).status,401);
+ assert.equal((await handler(sessionRequest('/logout','POST'),configured)).status,200);
+ assert.equal((await handler(sessionRequest('/session'),configured)).status,401);
+ assert.equal((await handler(sessionRequest('/github'),configured)).status,401);
 });
