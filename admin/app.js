@@ -1,9 +1,11 @@
 import { REPOSITORY, SITE_ORIGIN, GOOGLE_CLIENT_ID, API_ORIGIN } from './config.js';
+import { renderSectionEditor, revealSection } from './section-editor.js';
+import { templateNames } from '../lib/sections.js';
 import { GoogleAdmin } from '../lib/google-service.js';
 const service = new GoogleAdmin(REPOSITORY, SITE_ORIGIN, API_ORIGIN);
 
 const $ = id => document.getElementById(id);
-let token = false, pages = [], current = null, changes = {}, activeTab = 'text', busy = false, uploadField;
+let token = false, pages = [], current = null, changes = {}, activeTab = 'content', busy = false, uploadField;
 let pollingTimer;
 const objectURLs = new Set();
 const names = { 'index.html': 'HOME', 'about.html': 'ABOUT', 'info.html': 'INFO', 'JavaScript/script.js': '홈 타이핑 소개' };
@@ -15,6 +17,8 @@ function dirty() { return Object.keys(changes).length > 0; }
 function updateButtons() {
   const disabled = busy || !token || !current;
   for (const id of ['save', 'preview', 'export-draft']) $(id).disabled = disabled;
+  $('undo-structure').disabled=disabled||!current?.undoAvailable;
+  $('save').disabled=disabled||!dirty();
   $('publish').disabled = disabled || (!dirty() && !current?.revision) || current?.conflict;
   $('discard').disabled = disabled || !current?.revision;
   $('unpublish').hidden = !current || core(current.page) || !current.baseSha;
@@ -94,74 +98,41 @@ function renderPages() {
 }
 async function leavePage() { return !dirty() || await confirmAction('저장하지 않은 변경사항', '저장하지 않은 내용을 버리고 이동할까요? 저장한 초안은 유지됩니다.', '이동'); }
 async function openPage(page) {
-  current = await api(`/api/page?page=${encodeURIComponent(page)}`); changes = {}; $('field-search').value = '';
+  current = await api(`/api/page?page=${encodeURIComponent(page)}`); changes = {}; activeTab='content'; for(const tab of $('tabs').children)tab.setAttribute('aria-selected',String(tab.dataset.tab==='content')); $('field-search').value = '';
   $('page-title').textContent = names[page] || current.title.replace(' — Jay Youngjun Kim', '');
   $('page-path').textContent = page;
   $('conflict').hidden = !current.conflict;
   renderPages(); renderFields(); updateButtons();
 }
-const friendly = label => {
-  const translations = [
-    ['main profile kr', '홈 소개 · 한국어'], ['main profile en', '홈 소개 · 영어'], ['main header title footnote', '홈 각주'],
-    ['project header title', '프로젝트 제목'], ['project header body kr', '프로젝트 소개 · 한국어'], ['project header body en', '프로젝트 소개 · 영어'],
-    ['project header spec body', '프로젝트 기본 정보'], ['project header spec title', '기본 정보 항목명'],
-    ['project body kr', '본문 · 한국어'], ['project body en', '본문 · 영어'], ['project body title', '본문 제목'], ['project body label', '섹션 이름'],
-    ['main content list title', '홈 카드 제목'], ['main content list category', '홈 카드 분류'], ['main content title', '홈 카테고리'],
-    ['info section body kr', '정보 · 한국어'], ['info section body en', '정보 · 영어'], ['about section body kr', '소개 · 한국어'], ['about section body en', '소개 · 영어'],
-    ['project__img', '프로젝트 이미지'], ['content__img', '대표 이미지'], ['title', '페이지 제목'], ['footer', '하단 문구'],
-  ];
-  for (const [key, value] of translations) if (label === key || label.startsWith(key+' ·')) return label.replace(key, value);
-  return label;
-};
-function renderFields() {
-  const host = $('fields'); host.replaceChildren(); if (!current) return;
-  const search = $('field-search').value.toLowerCase();
-  if (activeTab === 'blocks') { renderBlocks(host, search); return; }
-  let count = 0;
-  for (const field of current.fields.filter(f => f.type === activeTab && `${f.label} ${changes[f.id] ?? f.value}`.toLowerCase().includes(search))) {
-    count++;
-    const row = document.createElement('div'); row.className = 'field';
-    const label = document.createElement('label'); label.className = 'field-label'; label.htmlFor = field.id; label.textContent = friendly(field.label);
-    const small = document.createElement('small'); small.textContent = `항목 ${count}`; label.append(small);
-    const box = document.createElement('div');
-    const isLong = (field.type === 'text' || field.type === 'meta') && !field.url && (field.value.length > 70 || field.label.includes('body'));
-    const input = document.createElement(isLong ? 'textarea' : 'input'); input.id = field.id; input.value = changes[field.id] ?? field.value;
-    if (isLong) input.rows = Math.min(12, Math.max(3, Math.ceil(input.value.length / 70)));
-    input.oninput = () => { if (input.value === field.value) delete changes[field.id]; else changes[field.id] = input.value; updateButtons(); };
-    box.append(input);
-    if (field.type === 'media' && field.url && field.tag !== 'iframe') {
-      if (['img','link'].includes(field.tag) && input.value && !input.value.startsWith('/assets/uploads/')) {
-        const img = document.createElement('img'); img.alt = '현재 이미지'; img.src = input.value; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer'; img.onerror = () => { img.alt = '이미지를 불러올 수 없습니다. 주소를 확인해 주세요.'; }; box.append(img);
-      }
-    }
-    if (field.url && (['media', 'link'].includes(field.type) || field.type === 'meta') && field.tag !== 'iframe') {
-      const upload = document.createElement('button'); upload.className = 'upload'; upload.textContent = '파일 업로드 후 주소 넣기';
-      upload.onclick = () => { uploadField = field.id; $('file-upload').click(); }; box.append(upload);
-    }
-    row.append(label, box); host.append(row);
-  }
-  if (!count) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = '이 범주에 편집할 항목이 없습니다.'; host.append(p); }
+const imageCache=new Map();
+async function localImage(path){
+ if(imageCache.has(path))return imageCache.get(path);
+ try{const blob=await api('/api/uploads/'+path.split('/').pop());const url=URL.createObjectURL(blob);objectURLs.add(url);imageCache.set(path,url);return url;}catch{return new URL(path,SITE_ORIGIN).href;}
 }
-function renderBlocks(host, search) {
-  const hint = document.createElement('p'); hint.className = 'muted'; hint.textContent = '기존 블록을 복제·이동·삭제합니다. 변경사항은 초안으로 저장됩니다. 홈 카드 삭제는 프로젝트 페이지를 비공개로 만들지 않습니다.'; host.append(hint);
-  for (const block of current.blocks.filter(b => `${b.label} ${b.className}`.toLowerCase().includes(search))) {
-    const row = document.createElement('div'); row.className = 'block-row';
-    const label = document.createElement('div'); label.textContent = block.label;
-    const small = document.createElement('small'); small.textContent = block.className; label.append(small);
-    const actions = document.createElement('div'); actions.className = 'actions';
-    const peers = current.blocks.filter(b => b.parent === block.parent && b.className === block.className);
-    for (const [action, title] of [['up','↑'],['down','↓'],['duplicate','복제'],['remove','삭제']]) {
-      const button = document.createElement('button'); button.textContent = title; button.setAttribute('aria-label', `${block.label.slice(0,30)} ${action === 'up' ? '위로' : action === 'down' ? '아래로' : title}`);
-      button.disabled = (action === 'up' && peers[0] === block) || (action === 'down' && peers.at(-1) === block);
-      button.onclick = () => run(async () => {
-        if (action === 'remove' && !await confirmAction('블록 삭제', '이 블록을 초안에서 삭제할까요? 발행 전에는 초안을 버려 되돌릴 수 있습니다.', '삭제')) return;
-        current = await api(`/api/block?page=${encodeURIComponent(current.page)}`, { method: 'POST', body: { ...payload(), operation: { id: block.id, action } } });
-        changes = {}; await loadPages(); renderFields(); notice('구성을 초안에 저장했습니다. 문구·이미지 탭에서 복제한 내용도 수정하세요.');
-      }); actions.append(button);
-    }
-    row.append(label, actions); host.append(row);
-  }
+function renderFields(){if(!current)return;
+ renderSectionEditor($('fields'),{current,changes,pages,siteOrigin:SITE_ORIGIN,localImage,api,
+  update:updateButtons,upload:id=>{uploadField=id;$('file-upload').click();},
+  act:performStructure,add:openAdd,openIntro:()=>run(async()=>{if(await leavePage())await openPage('JavaScript/script.js');})},activeTab);
 }
+async function performStructure(operation){await run(async()=>{
+ const section=current.sections.find(s=>s.id===operation.id);
+ if(operation.action==='remove'&&!await confirmAction('섹션 삭제',`“${section?.title||'선택한 섹션'}”과 안의 내용을 초안에서 삭제할까요? 발행 전까지 홈페이지는 유지됩니다.`, '삭제'))return;
+ current=await api(`/api/structure?page=${encodeURIComponent(current.page)}`,{method:'POST',body:{...payload(),operation}});
+ changes={};
+ if(operation.action==='add'){
+ const title=operation.title||templateNames[operation.template];
+ const candidates=current.sections.filter(s=>s.title===title);
+ if(candidates.length)revealSection(candidates.at(-1).id);
+ }
+ await loadPages();renderFields();notice('구성을 초안에 저장했습니다. 발행하면 홈페이지에 반영됩니다.');
+});}
+let addParent;
+function openAdd(parent,types){addParent=parent?.id||null;$('section-form').reset();const options=$('section-type');options.replaceChildren();for(const type of types)options.append(new Option(templateNames[type],type));$('section-dialog-title').textContent=parent?`${parent.title}에 추가`:'새 섹션 추가';$('section-dialog').showModal();}
+$('section-form').onsubmit=e=>{e.preventDefault();const operation={action:'add',parent:addParent,template:$('section-type').value,title:$('section-name').value};$('section-dialog').close();performStructure(operation);};
+$('undo-structure').onclick=()=>run(async()=>{
+ if(dirty()&&!await confirmAction('구성 되돌리기','현재 편집 중인 문구와 마지막 구성 변경을 이전 상태로 되돌릴까요?','되돌리기'))return;
+ current=await api(`/api/undo?page=${encodeURIComponent(current.page)}`,{method:'POST',body:{...payload(),changes:{}}});changes={};await loadPages();renderFields();notice('마지막 구성 변경을 되돌렸습니다.');
+});
 function payload() { return { revision: current.revision, draftId: current.draftId, baseSha: current.baseSha, changes }; }
 async function save() {
   current = await api(`/api/draft?page=${encodeURIComponent(current.page)}`, { method: 'POST', body: payload() });
@@ -181,7 +152,7 @@ $('logout').onclick = async () => {
   if (busy) return;
   if (!await leavePage()) return;
   clearTimeout(pollingTimer);
-  current = null; changes = {}; pages = []; $('preview-frame').srcdoc = ''; $('fields').replaceChildren(); $('pages').replaceChildren();
+  current = null; changes = {}; pages = []; imageCache.clear(); $('preview-frame').srcdoc = ''; $('fields').replaceChildren(); $('pages').replaceChildren();
   for (const u of objectURLs) URL.revokeObjectURL(u); objectURLs.clear(); showLogin(); notice('로그아웃했습니다.');
 };
 $('page-search').oninput = renderPages; $('field-search').oninput = renderFields;
@@ -211,7 +182,7 @@ async function pollDeployment(sha, count) {
 }
 $('preview').onclick = () => run(async () => {
   let { html } = await api(`/api/preview?page=${encodeURIComponent(current.page)}`, { method: 'POST', body: payload() });
-  for (const u of objectURLs) URL.revokeObjectURL(u); objectURLs.clear();
+  for (const u of objectURLs) URL.revokeObjectURL(u); objectURLs.clear(); imageCache.clear();
   const paths = [...new Set(html.match(/\/assets\/uploads\/[a-f0-9-]{36}\.(?:png|jpg|gif|webp|pdf|mp4)/g) || [])];
   for (const path of paths) {
     try { const blob = await api(`/api/uploads/${path.split('/').at(-1)}`, { blob: true }); const u = URL.createObjectURL(blob); objectURLs.add(u); html = html.replaceAll(path, u); }

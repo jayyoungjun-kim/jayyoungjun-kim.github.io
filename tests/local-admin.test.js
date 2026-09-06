@@ -85,3 +85,12 @@ test('invalid token format, executable uploads and arbitrary repository paths ar
   await assert.rejects(admin.request('/api/page?page=server/auth.js'),{status:422});
   await assert.rejects(admin.connect('a-password'),{status:401});
 });
+
+test('section edits remap dirty offsets, persist undo and reject stale requests',async()=>{
+ const {admin,store,writes}=await fixture();const original=await admin.request('/api/page?page=index.html');
+ const card=original.sections.find(s=>s.kind==='card');
+ const changed=await admin.request('/api/structure?page=index.html',{method:'POST',body:{...original,changes:{[original.fields[0].id]:'Changed longer title'},operation:{action:'duplicate',id:card.id}}});
+ assert.equal(changed.sections.filter(s=>s.kind==='card').length,original.sections.filter(s=>s.kind==='card').length+1);assert.equal(changed.undoAvailable,true);
+ await assert.rejects(admin.request('/api/structure?page=index.html',{method:'POST',body:{...original,operation:{action:'remove',id:card.id}}}),{status:409});
+ const undone=await admin.request('/api/undo?page=index.html',{method:'POST',body:{...changed,changes:{}}});assert.equal(undone.sections.filter(s=>s.kind==='card').length,original.sections.filter(s=>s.kind==='card').length);assert.equal(undone.title,'Changed longer title');assert.equal(undone.undoAvailable,false);assert.equal(writes.length,0);assert.ok(await store.get('drafts','index.html'));
+});
