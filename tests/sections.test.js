@@ -31,7 +31,7 @@ test('project supports mixed text image video columns and spacer sections withou
  for(const template of ['text','image','video','twoImages','spacer'])out=changeStructure(out,p,{action:'add',template,title:'Added'});
  let sections=select(out,p,'detail');assert.equal(sections.length,select(src,p,'detail').length+5);
  const added=sections.find(s=>s.title==='Added'),target=sections.find(s=>s.movable);out=changeStructure(out,p,{action:'move',id:added.id,target:target.id,position:'before'});assert.equal(select(out,p,'detail').filter(s=>s.movable)[0].title,'Added');
- assert.throws(()=>changeStructure(out,p,{action:'remove',id:select(out,p,'detail').find(s=>!s.movable).id}));
+ assert.throws(()=>changeStructure(out,p,{action:'remove',id:select(out,p,'fixed')[0].id}));
 });
 test('invalid moves and executable card connections are rejected',()=>{
  const p='index.html',src=read(p),cards=select(src,p,'card'),cat=select(src,p,'category')[0];assert.throws(()=>changeStructure(src,p,{action:'move',id:cards[0].id,target:cat.id}));
