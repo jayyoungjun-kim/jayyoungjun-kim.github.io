@@ -95,6 +95,7 @@ export function renderFormEditor(host,ctx,mode='content'){
    input.oninput=()=>{if(input.value===f.value)delete changes[f.id];else changes[f.id]=input.value;update();};wrap.append(input);
    if(f.url&&f.tag!=='iframe'){const tools=el('div','field-tools');if(s.kind!=='projectLink')tools.append(button(['img','video','source'].includes(f.tag)?'파일 선택 · 교체':'파일 연결',()=>upload(f.id),'upload'));
     if(f.tag==='a'&&['card','projectLink'].includes(s.kind)){const select=el('select');select.setAttribute('aria-label','연결할 상세 페이지');select.append(new Option('상세 페이지 선택…',''));for(const p of pages.filter(p=>p.path.endsWith('.html')&&!['index.html','about.html','info.html'].includes(p.path))){select.append(new Option(p.path.replace('.html','').replaceAll('-',' '),p.path));}select.value=value;select.onchange=()=>{if(!select.value)return;input.value=select.value;input.oninput();};tools.append(select);}
+    if(f.tag==='img'||f.attribute==='poster')tools.append(button('보관함에서 선택',()=>ctx.media(f.id),'upload'));
     wrap.append(tools);
    }container.append(wrap);
   }return count;
