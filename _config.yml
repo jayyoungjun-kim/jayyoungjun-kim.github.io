@@ -1,0 +1,12 @@
+# The public portfolio stays static. Admin server/tooling is not a Pages artifact.
+exclude:
+  - lib
+  - scripts
+  - tests
+  - docs
+  - node_modules
+  - dist
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - README.md
