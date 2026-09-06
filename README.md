@@ -2,7 +2,7 @@
 
 The portfolio and admin UI run on GitHub Pages, preserving public HTML, CSS, URLs and animations. A Cloudflare Worker validates Google ID tokens and performs GitHub requests with a server-only repository credential. Only the verified account jayyoungjunkim@gmail.com is allowed.
 
-This branch requires initial Google Web client and Worker configuration before production merge. See [Google login activation](docs/google-login-setup.md). The browser holds the Google ID token in tab memory and never receives the GitHub credential.
+Google Web client and Worker configuration are connected; deployment details and credential renewal are recorded in the setup guide. See [Google login activation](docs/google-login-setup.md). The browser holds the Google ID token in tab memory and never receives the GitHub credential.
 
 Drafts and selected upload files are stored in IndexedDB in the current browser, not in a cloud account. They do not sync across browsers or devices and may be lost if browser data is cleared. A draft backup downloads the current HTML and pending file contents as JSON for manual recovery. There is no automatic backup import or server-side private draft storage.
 

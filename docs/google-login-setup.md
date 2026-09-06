@@ -23,3 +23,11 @@ GitHub 토큰은 Cloudflare의 secret에 보관된다. API 프록시는 고정 �
 설정된 Worker 주소는 빌드 시 관리자 CSP connect-src에 반영된다. 허용된 Google 라이브러리를 제외한 외부 스크립트는 실행되지 않는다. Worker에는 운영 요청 로그를 활성화하지 않았다. 인증 토큰을 로그에 출력하지 않는다.
 
 공식 참고: [Google ID token 검증](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token), [Cloudflare secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+## Connected deployment (2026-09-06)
+
+- Google project: `jay-portfolio-admin`; Web client: `Portfolio Admin Web`.
+- Origin: `https://jayyoungjun-kim.github.io`; test user: `jayyoungjunkim@gmail.com`.
+- Worker: `https://jay-portfolio-admin-auth.jay-portfolio-content-admin.workers.dev`.
+- GitHub credential: `Portfolio Admin Server`, this repository only, Contents write and Actions read. Stored as encrypted Worker secret `GITHUB_TOKEN`; never committed.
+- Credential expires **2027-09-06**. Replace the Worker secret before expiry. Google sign-in does not require entering this credential in the browser.
