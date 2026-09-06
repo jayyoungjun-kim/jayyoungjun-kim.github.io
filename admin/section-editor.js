@@ -1,3 +1,4 @@
+import {renderVisualCanvas,disposeVisualCanvas} from './visual-canvas.js';
 import {cleanRich} from '../lib/rich-text.js';
 import { allowedTemplates, templateNames } from '../lib/sections.js';
 let pendingSelection;
@@ -17,6 +18,10 @@ export function fieldLabel(f){
  return f.type==='meta'?'페이지 제목':'내용';
 }
 export function renderSectionEditor(host,ctx,mode='content'){
+ if(mode==='content'&&ctx.current.source&&ctx.current.page!=='JavaScript/script.js')return renderVisualCanvas(host,ctx,renderFormEditor,revealSection);
+ disposeVisualCanvas();return renderFormEditor(host,ctx,mode);
+}
+export function renderFormEditor(host,ctx,mode='content'){
  const {current,changes,update,act,upload,api,pages}=ctx;view=mode;
  if(page!==current.page){page=current.page;selectedIndex=0;selection=null;}
  const all=current.sections||[];
@@ -31,7 +36,7 @@ export function renderSectionEditor(host,ctx,mode='content'){
  const outline=el('aside','section-outline');outline.setAttribute('aria-label','페이지 섹션');
  const heading=el('div','outline-heading');heading.append(el('h2','',mode==='settings'?'페이지 설정':'페이지 구성'),el('span','count',String(visible.filter(s=>!s.parent).length)));outline.append(heading);
  if(mode==='content')outline.append(el('p','outline-help','⠿ 손잡이를 드래그해 순서를 바꾸세요.'));
- const select=s=>{selectedIndex=all.indexOf(s);selection={title:s.title,kind:s.kind,thumbnail:s.thumbnail,occurrence:all.filter(x=>x.kind===s.kind&&x.title===s.title&&x.thumbnail===s.thumbnail).indexOf(s)};renderSectionEditor(host,ctx,mode);};
+ const select=s=>{selectedIndex=all.indexOf(s);selection={title:s.title,kind:s.kind,thumbnail:s.thumbnail,occurrence:all.filter(x=>x.kind===s.kind&&x.title===s.title&&x.thumbnail===s.thumbnail).indexOf(s)};renderFormEditor(host,ctx,mode);};
  const descendants=s=>[s,...s.children.flatMap(k=>descendants(all.find(x=>x.id===k)))];
  const runOperation=async op=>{await act(op);};
  function canDrop(from,to){return from&&from.id!==to.id&&((from.parent===to.parent&&from.movable&&to.movable&&(from.kind===to.kind||from.kind==='detail'||['infoItem','news'].includes(from.kind)&&['infoItem','news'].includes(to.kind)))||from.kind==='card'&&(to.kind==='category'||to.kind==='card'));}

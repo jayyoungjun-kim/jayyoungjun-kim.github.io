@@ -4,7 +4,7 @@ Complete [Google login setup](google-login-setup.md) before production merge. Si
 
 ## 콘텐츠 수정
 
-페이지 선택 → 페이지 구성에서 섹션 선택 → 내용 편집 → 초안 저장 → 미리보기 → 발행. 검색·공유 및 메뉴·푸터는 ‘페이지 설정’에 모여 있다.
+페이지 선택 → 실제 화면에서 블록 클릭 → 옆 패널에서 편집 → 초안 저장 → 발행. 입력 중인 변경은 화면에 즉시 반영된다. 검색·공유 및 메뉴·푸터는 ‘페이지 설정’에 모여 있다.
 
 - 기존 홈페이지의 레이아웃·색상·글꼴·여백·애니메이션은 유지한다.
 - 초안 저장과 파일 선택은 GitHub를 변경하지 않는다. 실제 발행 버튼을 누를 때만 공개 저장소에 커밋한다.
@@ -49,3 +49,7 @@ Complete [Google login setup](google-login-setup.md) before production merge. Si
 ## Development and deployment
 
 See [Google login setup](google-login-setup.md). Rebuild admin/app.bundle.js after source or public config changes. The Worker verifies Google ID tokens and forwards permitted content operations to the fixed GitHub repository.
+
+## 화면 블록 편집
+
+기존 페이지의 HTML과 CSS를 사용한 화면에서 블록이 순서대로 표시된다. 블록 사이의 ‘여기에 블록 추가’로 해당 위치에 추가하고, 이동 손잡이·방향키·위아래 버튼으로 순서를 바꾼다. 화면의 문구나 이미지를 클릭하면 해당 내용의 편집 패널이 열린다. PC·모바일 버튼으로 반응형 배치를 확인하고 ‘화면만 보기’로 편집 테두리를 숨길 수 있다. 영상 자동 재생과 외부 임베드, 분석 스크립트는 실행하지 않는다. 홈 타이핑 문구는 완성된 문장으로 표시한다.
