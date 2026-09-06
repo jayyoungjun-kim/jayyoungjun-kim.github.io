@@ -1,9 +1,11 @@
+import {bindBlockSort} from './block-sort.js';
+const sortCleanups=new WeakMap();
 import {renderVisualCanvas,disposeVisualCanvas} from './visual-canvas.js';
 import {cleanRich} from '../lib/rich-text.js';
 import { allowedTemplates, templateNames } from '../lib/sections.js';
 let pendingSelection;
 export function revealSection(id){pendingSelection=id;}
-let page='',selectedIndex=0,previousData,selection,dragging,view='content';
+let page='',selectedIndex=0,previousData,selection,view='content';
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const button=(text,fn,cls='')=>{const b=el('button',cls,text);b.type='button';b.onclick=fn;return b;};
 const names={participants:'참여자 목록',participant:'참여자',navigation:'프로젝트 연결',projectLink:'프로젝트 연결',category:'카테고리',card:'작업',aboutGroup:'섹션',infoGroup:'섹션',aboutItem:'소개',infoItem:'내용',news:'소식',detail:'섹션',part:'내용',fixed:'기본 정보',settings:'설정'};
@@ -32,7 +34,7 @@ export function renderFormEditor(host,ctx,mode='content'){
  const visible=all.filter(s=>mode==='settings'?s.kind==='settings':s.kind!=='settings');
  let selected=all[selectedIndex];if(!visible.includes(selected))selected=visible[0];
  if(selected){selectedIndex=all.indexOf(selected);selection={title:selected.title,kind:selected.kind,thumbnail:selected.thumbnail,occurrence:all.filter(s=>s.kind===selected.kind&&s.title===selected.title&&s.thumbnail===selected.thumbnail).indexOf(selected)};}
- host.replaceChildren();host.className='section-workbench';
+ sortCleanups.get(host)?.();host.replaceChildren();host.className='section-workbench';
  if(!selected&&mode==='settings'){host.append(el('p','empty','이 페이지에는 별도 설정이 없습니다.'));return;}
  const outline=el('aside','section-outline');outline.setAttribute('aria-label','페이지 섹션');
  const heading=el('div','outline-heading');heading.append(el('h2','',mode==='settings'?'페이지 설정':'페이지 구성'),el('span','count',String(visible.filter(s=>!s.parent).length)));outline.append(heading);
@@ -40,17 +42,9 @@ export function renderFormEditor(host,ctx,mode='content'){
  const select=s=>{selectedIndex=all.indexOf(s);selection={title:s.title,kind:s.kind,thumbnail:s.thumbnail,occurrence:all.filter(x=>x.kind===s.kind&&x.title===s.title&&x.thumbnail===s.thumbnail).indexOf(s)};renderFormEditor(host,ctx,mode);};
  const descendants=s=>[s,...s.children.flatMap(k=>descendants(all.find(x=>x.id===k)))];
  const runOperation=async op=>{await act(op);};
- function canDrop(from,to){return from&&from.id!==to.id&&((from.parent===to.parent&&from.movable&&to.movable&&(from.kind===to.kind||from.kind==='detail'||['infoItem','news'].includes(from.kind)&&['infoItem','news'].includes(to.kind)))||from.kind==='card'&&(to.kind==='category'||to.kind==='card'));}
- function dropZone(node,s){
-  node.ondragover=e=>{const from=all.find(x=>x.id===dragging);if(!canDrop(from,s))return;e.preventDefault();e.stopPropagation();node.classList.add('drop-target');e.dataTransfer.dropEffect='move';};
-  node.ondragleave=()=>node.classList.remove('drop-target');
-  node.ondrop=e=>{e.preventDefault();e.stopPropagation();node.classList.remove('drop-target');const from=all.find(x=>x.id===dragging);dragging=null;if(!canDrop(from,s))return;
-   if(from.kind==='card'&&(s.kind==='category'||from.parent!==s.parent))runOperation({action:'transfer',id:from.id,parent:s.kind==='category'?s.id:s.parent,target:s.kind==='card'?s.id:undefined,position:e.clientY>node.getBoundingClientRect().top+node.getBoundingClientRect().height/2?'after':'before'});
-   else runOperation({action:'move',id:from.id,target:s.id,position:e.clientY>node.getBoundingClientRect().top+node.getBoundingClientRect().height/2?'after':'before'});
-  };
- }
- function handle(s){const h=button('⠿',()=>{},'drag-handle');h.draggable=true;h.title='드래그하여 이동 · 키보드 ↑ ↓';h.setAttribute('aria-label',`${s.title} 순서 이동`);
-  h.ondragstart=e=>{dragging=s.id;e.stopPropagation();e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',s.id);};h.ondragend=()=>{dragging=null;host.querySelectorAll('.drop-target').forEach(n=>n.classList.remove('drop-target'));};
+ function canDrop(from,to){return from&&to&&from.id!==to.id&&((from.parent===to.parent&&from.movable&&to.movable&&(from.kind===to.kind||from.kind==='detail'||['infoItem','news'].includes(from.kind)&&['infoItem','news'].includes(to.kind)))||from.kind==='card'&&(to.kind==='category'||to.kind==='card'));}
+ function dropZone(node,s){node.dataset.sortId=s.id;}
+ function handle(s){const h=button('⠿',()=>{},'drag-handle');h.title='드래그하여 이동 · 키보드 ↑ ↓';h.setAttribute('aria-label',s.title+' 순서 이동');
   h.onkeydown=e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();move(s,e.key==='ArrowUp'?-1:1);};return h;}
  function peersFor(s){return all.filter(x=>x.parent===s.parent&&x.movable&&(x.kind===s.kind||s.kind==='detail'||['infoItem','news'].includes(s.kind)&&['infoItem','news'].includes(x.kind)));}
  function move(s,delta){const peers=peersFor(s),target=peers[peers.indexOf(s)+delta];if(target)runOperation({action:'move',id:s.id,target:target.id,position:delta<0?'before':'after'});}
@@ -114,6 +108,11 @@ export function renderFormEditor(host,ctx,mode='content'){
    const card=el('article',child.kind==='card'?'work-card':'child-card');const h=el('div','child-heading');h.append(handle(child),button(child.title,()=>select(child),'child-title'),actions(child));card.append(h);if(child.kind==='card')imagePreview(child.thumbnail,card);else card.append(el('p','child-summary',descendants(child).flatMap(s=>s.fieldIds).map(id=>current.fields.find(f=>f.id===id)).filter(f=>f?.type==='text').map(f=>f.plain??f.value).join(' ').slice(0,180)));card.append(button('내용 편집 →',()=>select(child),'edit-child'));dropZone(card,child);inspector.append(card);
   }
  }
+ sortCleanups.set(host,bindBlockSort({root:host,handleSelector:'.drag-handle',itemSelector:'[data-sort-id]',canDrop:(from,to)=>canDrop(all.find(s=>s.id===from),all.find(s=>s.id===to)),commit:(id,target,position)=>{
+  const from=all.find(s=>s.id===id),to=all.find(s=>s.id===target);
+  if(from.kind==='card'&&(to.kind==='category'||from.parent!==to.parent))runOperation({action:'transfer',id,parent:to.kind==='category'?to.id:to.parent,target:to.kind==='card'?target:undefined,position});
+  else runOperation({action:'move',id,target,position});
+ }}));
  const choices=allowedTemplates(selected,page);if(selected.kind==='navigation'){for(const choice of choices)inspector.append(button('+ '+templateNames[choice]+' 추가',()=>ctx.add(selected,[choice]),'add-block'));}
  else if(choices.length)inspector.append(button(selected.kind==='participants'?'+ 참여자 추가':selected.kind==='category'?'+ 작업 카드 추가':'+ 내용 블록 추가',()=>ctx.add(selected,choices),'add-block'));
  if(selected.kind==='card')inspector.append(el('p','editor-tip','카드는 홈 화면의 썸네일입니다. 상세 페이지 본문은 왼쪽 프로젝트 메뉴에서 편집하세요.'));

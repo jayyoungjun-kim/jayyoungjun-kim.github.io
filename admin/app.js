@@ -86,14 +86,14 @@ function setup() {
 }
 function startSync(){
  syncEpoch++;liveSync?.stop();
- liveSync=startLiveSync({active:()=>token&&!busy&&document.visibilityState!=='hidden'&&!document.querySelector('dialog[open]'),check:syncRemote});
+ liveSync=startLiveSync({active:()=>token&&!busy&&!document.body.classList.contains('block-sorting')&&document.visibilityState!=='hidden'&&!document.querySelector('dialog[open]'),check:syncRemote});
  liveSync.tick();
 }
 async function syncRemote(){
  const selected=current,epoch=syncEpoch;
  try{
   const result=await api('/api/pages');
-  if(!token||busy||epoch!==syncEpoch||selected!==current||document.querySelector('dialog[open]'))return;
+  if(!token||busy||epoch!==syncEpoch||selected!==current||document.body.classList.contains('block-sorting')||document.querySelector('dialog[open]'))return;
   const decision=syncDecision(current,changes,result.pages);
   const introChanged=pages.find(p=>p.path==='JavaScript/script.js')?.sha!==result.pages.find(p=>p.path==='JavaScript/script.js')?.sha;
   if(decision==='conflict'){
@@ -103,7 +103,7 @@ async function syncRemote(){
    const path=decision==='removed'?'index.html':current.page;
    const latest=await api('/api/page?page='+encodeURIComponent(path));
    // The user may have started typing or switched pages during the request.
-   if(!token||busy||epoch!==syncEpoch||current!==selected||dirty()||current?.revision||document.querySelector('dialog[open]'))return;
+   if(!token||busy||epoch!==syncEpoch||current!==selected||dirty()||current?.revision||document.body.classList.contains('block-sorting')||document.querySelector('dialog[open]'))return;
    current=latest;changes={};$('page-title').textContent=names[path]||current.title.replace(' — Jay Youngjun Kim','');$('page-path').textContent=path;
    $('conflict').hidden=!current.conflict;renderFields();updateButtons();
    $('sync-status').textContent='최신 변경을 반영했습니다 · '+new Date().toLocaleTimeString('ko-KR');
