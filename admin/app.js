@@ -126,9 +126,9 @@ async function performStructure(operation){await run(async()=>{
  }
  await loadPages();renderFields();notice('구성을 초안에 저장했습니다. 발행하면 홈페이지에 반영됩니다.');
 });}
-let addParent;
-function openAdd(parent,types){addParent=parent?.id||null;$('section-form').reset();const options=$('section-type');options.replaceChildren();for(const type of types)options.append(new Option(templateNames[type],type));$('section-dialog-title').textContent=parent?`${parent.title}에 추가`:'새 섹션 추가';$('section-dialog').showModal();}
-$('section-form').onsubmit=e=>{e.preventDefault();const operation={action:'add',parent:addParent,template:$('section-type').value,title:$('section-name').value};$('section-dialog').close();performStructure(operation);};
+let addParent,addPlacement;
+function openAdd(parent,types,placement={}){addPlacement=placement;addParent=parent?.id||null;$('section-form').reset();const options=$('section-type');options.replaceChildren();for(const type of types)options.append(new Option(templateNames[type],type));$('section-dialog-title').textContent=parent?`${parent.title}에 추가`:'새 섹션 추가';$('section-dialog').showModal();}
+$('section-form').onsubmit=e=>{e.preventDefault();const operation={...addPlacement,action:'add',parent:addParent,template:$('section-type').value,title:$('section-name').value};$('section-dialog').close();performStructure(operation);};
 $('undo-structure').onclick=()=>run(async()=>{
  if(dirty()&&!await confirmAction('구성 되돌리기','현재 편집 중인 문구와 마지막 구성 변경을 이전 상태로 되돌릴까요?','되돌리기'))return;
  current=await api(`/api/undo?page=${encodeURIComponent(current.page)}`,{method:'POST',body:{...payload(),changes:{}}});changes={};await loadPages();renderFields();notice('마지막 구성 변경을 되돌렸습니다.');
