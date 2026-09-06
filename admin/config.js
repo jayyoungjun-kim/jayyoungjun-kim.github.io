@@ -5,3 +5,6 @@ export const REPOSITORY = Object.freeze({
   GITHUB_BRANCH: 'master',
 });
 export const SITE_ORIGIN = 'https://jayyoungjun-kim.github.io';
+
+export const GOOGLE_CLIENT_ID = '';
+export const API_ORIGIN = '';

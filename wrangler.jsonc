@@ -1,0 +1,8 @@
+{
+  "name": "jay-portfolio-admin-auth",
+  "main": "server/worker.js",
+  "compatibility_date": "2026-09-06",
+  "workers_dev": true,
+  "vars": { "GOOGLE_CLIENT_ID": "" },
+  "observability": { "enabled": false }
+}

@@ -8,7 +8,7 @@ createServer(async (req,res) => {
     const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     const file = resolve(root, '.' + (path.endsWith('/') ? path + 'index.html' : path));
     if (!file.startsWith(root+'/') || /(^|\/)\./.test(path) || !(/\.(html|css|js|gltf)$/.test(file)) ||
-      path.startsWith('/lib/') || path.startsWith('/node_modules/') || path.startsWith('/scripts/') || path.startsWith('/tests/')) {
+      path.startsWith('/server/') || path.startsWith('/lib/') || path.startsWith('/node_modules/') || path.startsWith('/scripts/') || path.startsWith('/tests/')) {
       res.writeHead(404).end(); return;
     }
     const bytes = await readFile(file);

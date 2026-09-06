@@ -1,6 +1,6 @@
-import { REPOSITORY, SITE_ORIGIN } from './config.js';
-import { LocalAdmin } from '../lib/service.js';
-const service = new LocalAdmin(REPOSITORY, SITE_ORIGIN);
+import { REPOSITORY, SITE_ORIGIN, GOOGLE_CLIENT_ID, API_ORIGIN } from './config.js';
+import { GoogleAdmin } from '../lib/google-service.js';
+const service = new GoogleAdmin(REPOSITORY, SITE_ORIGIN, API_ORIGIN);
 
 const $ = id => document.getElementById(id);
 let token = false, pages = [], current = null, changes = {}, activeTab = 'text', busy = false, uploadField;
@@ -47,7 +47,7 @@ function showLogin(expired = false) {
   token = false; service.disconnect();
   $('login').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
   $('account').textContent = '';
-  if (expired) notice('연결이 해제되었습니다. 토큰을 다시 입력하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
+  if (expired) notice('연결이 해제되었습니다. Google로 다시 로그인하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
   updateButtons();
 }
 async function login(credential) {
@@ -60,17 +60,21 @@ async function login(credential) {
       $('login').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
       await loadPages();
       if (!current) await openPage('index.html');
-      notice('GitHub에 연결했습니다. 초안은 이 브라우저에만 저장됩니다.');
+      notice('Google로 로그인했습니다. 초안은 이 브라우저에만 저장됩니다.');
     } catch (e) { showLogin(); throw e; }
   });
 }
 function setup() {
-  const supported = location.origin === SITE_ORIGIN || ['localhost', '127.0.0.1'].includes(location.hostname);
-  $('token-form').hidden = !supported;
-  if (!supported) {
-    $('connection').textContent = '관리자 화면은 아래 홈페이지 주소에서 열어 주세요. 로컬 파일에서는 연결할 수 없습니다.';
-    const a = document.createElement('a'); a.href = SITE_ORIGIN + '/admin/'; a.textContent = '온라인 관리자 화면 열기 ↗'; $('connection').append(document.createElement('br'), a);
-  } else $('connection').textContent = '연결할 때마다 토큰을 입력합니다. 토큰은 저장하거나 백업하지 않습니다.';
+  if(location.origin!==SITE_ORIGIN) {
+    $('connection').textContent='관리자 화면은 온라인 홈페이지에서 열어 주세요. 로컬 파일에서는 로그인할 수 없습니다.';
+    return;
+  }
+  if(!GOOGLE_CLIENT_ID||!API_ORIGIN){$('connection').textContent='Google 로그인 연결을 준비 중입니다. 최초 서비스 설정이 완료되면 로그인 버튼이 표시됩니다.';return;}
+  $('connection').textContent='Google 로그인 버튼을 불러오고 있습니다.';
+  const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;
+  script.onload=()=>{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:result=>login(result.credential),auto_select:false});google.accounts.id.renderButton($('google-login'),{type:'standard',theme:'outline',size:'large',text:'signin_with'});$('connection').textContent='jayyoungjunkim@gmail.com 계정으로 로그인하세요.';};
+  script.onerror=()=>{$('connection').textContent='Google 로그인 버튼을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.';};
+  document.head.append(script);
 }
 async function loadPages() { pages = (await api('/api/pages')).pages; renderPages(); }
 function renderPages() {
@@ -173,7 +177,6 @@ function confirmAction(title, message, label = '확인') {
   });
 }
 
-$('token-form').onsubmit = e => { e.preventDefault(); if(busy)return; const credential=$('github-token').value.trim(); $('github-token').value=''; login(credential); };
 $('logout').onclick = async () => {
   if (busy) return;
   if (!await leavePage()) return;

@@ -1,8 +1,8 @@
 # Jay Youngjun Kim portfolio
 
-The portfolio and `/admin/` both run on GitHub Pages. There is no application server, Google OAuth app, Cloudflare account, runtime secret or external database to configure. Existing public HTML, CSS, URLs and animations are preserved.
+The portfolio and admin UI run on GitHub Pages, preserving public HTML, CSS, URLs and animations. A Cloudflare Worker validates Google ID tokens and performs GitHub requests with a server-only repository credential. Only the verified account jayyoungjunkim@gmail.com is allowed.
 
-The administrator connects with a **fine-grained GitHub personal access token** owned by `jayyoungjun-kim`, restricted to this repository. The browser talks directly to `api.github.com`. Tokens live only in the current tab memory and are cleared on disconnect/navigation; they are never stored in source, IndexedDB or backups. This is GitHub token authentication, not Gmail login.
+This branch requires initial Google Web client and Worker configuration before production merge. See [Google login activation](docs/google-login-setup.md). The browser holds the Google ID token in tab memory and never receives the GitHub credential.
 
 Drafts and selected upload files are stored in IndexedDB in the current browser, not in a cloud account. They do not sync across browsers or devices and may be lost if browser data is cleared. A draft backup downloads the current HTML and pending file contents as JSON for manual recovery. There is no automatic backup import or server-side private draft storage.
 
