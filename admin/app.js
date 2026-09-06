@@ -209,7 +209,7 @@ $('publish').onclick = () => run(async () => {
   if (!await confirmAction('홈페이지에 발행', `${current.page}의 초안을 공개 홈페이지에 반영할까요? 변경사항과 업로드 파일은 공개 GitHub 저장소에 기록됩니다.`, '발행')) return;
   if (dirty() || !current.revision) await save();
   const result = await api(`/api/publish?page=${encodeURIComponent(current.page)}`, { method: 'POST', body: { revision: current.revision, draftId: current.draftId } });
-  notice(result.unchanged ? '발행된 내용과 같습니다.' : 'GitHub에 반영했습니다. 홈페이지 배포 상태를 확인하고 있습니다.');
+  notice(result.unchanged ? '발행된 내용과 같습니다.' : 'GitHub에 저장했습니다. 홈페이지에 실시간으로 반영하고 있습니다.');
   if (result.cleanupPending) notice('GitHub 반영은 완료되었습니다. 초안 정리에 실패했으므로 수정 이력을 확인한 뒤 초안을 정리해 주세요.');
   await loadPages(); await openPage(current.page);
   if (!result.unchanged) pollDeployment(result.sha, 0);
@@ -219,10 +219,11 @@ async function pollDeployment(sha, count) {
   try {
     const result = await api(`/api/deployment?sha=${sha}`);
     if (result.status === 'completed') {
-      notice(result.conclusion === 'success' ? '홈페이지 배포가 완료되었습니다.' : 'GitHub에는 저장했지만 홈페이지 배포가 완료되지 않았습니다. 배포 이력을 확인해 주세요.', result.conclusion !== 'success');
+      notice(result.conclusion === 'success' ? (result.live?'홈페이지에 반영되었습니다. 열려 있는 홈페이지도 자동으로 갱신됩니다.':'홈페이지 배포가 완료되었습니다.') : 'GitHub에는 저장했지만 홈페이지 배포가 완료되지 않았습니다. 배포 이력을 확인해 주세요.', result.conclusion !== 'success');
+      if(result.live)return;
       const link = document.createElement('a'); link.href = result.url; link.textContent = '배포 이력 ↗'; link.target = '_blank'; link.rel = 'noopener'; $('notice').append(link); return;
     }
-    if (count < 20 && token) pollingTimer = setTimeout(() => pollDeployment(sha, count+1), 10000);
+    if (count < 20 && token) pollingTimer = setTimeout(() => pollDeployment(sha, count+1), 2000);
     else notice('GitHub에 저장했습니다. 배포가 계속 진행 중입니다. GitHub Actions에서 상태를 확인해 주세요.');
   } catch { notice('GitHub에 저장했습니다. 배포 상태는 GitHub Actions에서 확인해 주세요.'); }
 }

@@ -15,5 +15,21 @@
       "binding": "ADMIN_SESSIONS",
       "id": "302422c2e35b423a9d435ced56dc530c"
     }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LIVE_CONTENT",
+        "class_name": "LiveContent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "live-v1",
+      "new_sqlite_classes": [
+        "LiveContent"
+      ]
+    }
   ]
 }
