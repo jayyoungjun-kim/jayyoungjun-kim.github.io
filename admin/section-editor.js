@@ -19,18 +19,18 @@ export function renderSectionEditor(host,ctx,mode='content'){
  const {current,changes,update,act,upload,api,pages}=ctx;view=mode;
  if(page!==current.page){page=current.page;selectedIndex=0;selection=null;}
  const all=current.sections||[];
- if(previousData!==current&&selection){const match=all.findIndex(s=>s.kind===selection.kind&&s.title===selection.title);if(match>=0)selectedIndex=match;}
+ if(previousData!==current&&selection){const matches=all.filter(s=>s.kind===selection.kind&&s.title===selection.title&&s.thumbnail===selection.thumbnail);const match=matches[Math.min(selection.occurrence,matches.length-1)];if(match)selectedIndex=all.indexOf(match);}
  if(pendingSelection){const index=all.findIndex(s=>s.id===pendingSelection);if(index>=0)selectedIndex=index;pendingSelection=null;}
  previousData=current;
  const visible=all.filter(s=>mode==='settings'?s.kind==='settings':s.kind!=='settings');
  let selected=all[selectedIndex];if(!visible.includes(selected))selected=visible[0];
- if(selected){selectedIndex=all.indexOf(selected);selection={title:selected.title,kind:selected.kind};}
+ if(selected){selectedIndex=all.indexOf(selected);selection={title:selected.title,kind:selected.kind,thumbnail:selected.thumbnail,occurrence:all.filter(s=>s.kind===selected.kind&&s.title===selected.title&&s.thumbnail===selected.thumbnail).indexOf(selected)};}
  host.replaceChildren();host.className='section-workbench';
  if(!selected&&mode==='settings'){host.append(el('p','empty','이 페이지에는 별도 설정이 없습니다.'));return;}
  const outline=el('aside','section-outline');outline.setAttribute('aria-label','페이지 섹션');
  const heading=el('div','outline-heading');heading.append(el('h2','',mode==='settings'?'페이지 설정':'페이지 구성'),el('span','count',String(visible.filter(s=>!s.parent).length)));outline.append(heading);
  if(mode==='content')outline.append(el('p','outline-help','⠿ 손잡이를 드래그해 순서를 바꾸세요.'));
- const select=s=>{selectedIndex=all.indexOf(s);selection={title:s.title,kind:s.kind};renderSectionEditor(host,ctx,mode);};
+ const select=s=>{selectedIndex=all.indexOf(s);selection={title:s.title,kind:s.kind,thumbnail:s.thumbnail,occurrence:all.filter(x=>x.kind===s.kind&&x.title===s.title&&x.thumbnail===s.thumbnail).indexOf(s)};renderSectionEditor(host,ctx,mode);};
  const descendants=s=>[s,...s.children.flatMap(k=>descendants(all.find(x=>x.id===k)))];
  const runOperation=async op=>{await act(op);};
  function canDrop(from,to){return from&&from.id!==to.id&&((from.parent===to.parent&&from.movable&&to.movable&&(from.kind===to.kind||from.kind==='detail'||['infoItem','news'].includes(from.kind)&&['infoItem','news'].includes(to.kind)))||from.kind==='card'&&(to.kind==='category'||to.kind==='card'));}
@@ -50,7 +50,9 @@ export function renderSectionEditor(host,ctx,mode='content'){
  function actions(s){const wrap=el('div','section-actions');if(!s.movable)return wrap;
   for(const [label,fn]of[['↑',()=>move(s,-1)],['↓',()=>move(s,1)],['복제',()=>runOperation({action:'duplicate',id:s.id})],['삭제',()=>runOperation({action:'remove',id:s.id})]]){const b=button(label,fn,label==='삭제'?'quiet danger':'quiet');b.setAttribute('aria-label',`${s.title} ${label==='↑'?'위로 이동':label==='↓'?'아래로 이동':label}`);if(label==='↑'||label==='↓'){const peers=peersFor(s);b.disabled=label==='↑'?peers.indexOf(s)===0:peers.indexOf(s)===peers.length-1;}wrap.append(b);}return wrap;}
  function row(s,depth){const r=el('div','outline-row'+(selected?.id===s.id?' selected':''));r.style.setProperty('--depth',depth);if(s.movable)r.append(handle(s));else r.append(el('span','row-icon',s.kind==='settings'?'⚙':'•'));
-  const b=button(s.title,()=>select(s),'section-select');b.setAttribute('aria-current',String(selected?.id===s.id));r.append(b);dropZone(r,s);outline.append(r);
+  if(s.thumbnail){const thumb=el('img','outline-thumb');thumb.alt='';thumb.loading='lazy';thumb.referrerPolicy='no-referrer';try{const url=new URL(s.thumbnail,ctx.siteOrigin);if(['https:','http:'].includes(url.protocol))thumb.src=url.href;}catch{}thumb.onerror=()=>{thumb.hidden=true;};r.append(thumb);}
+  const number=s.kind==='detail'?String(all.filter(x=>x.kind==='detail').indexOf(s)+1).padStart(2,'0')+' · ':'';
+  const b=button(number+s.title,()=>select(s),'section-select');b.setAttribute('aria-current',String(selected?.id===s.id));r.append(b);dropZone(r,s);outline.append(r);
   // Fine-grained content blocks are edited inline, so the outline stays short.
   for(const k of s.children){const child=all.find(x=>x.id===k);if(child.kind!=='part')row(child,depth+1);}
  }
