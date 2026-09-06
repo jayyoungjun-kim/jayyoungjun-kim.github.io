@@ -1,3 +1,4 @@
+import {readNewsTitle,newsTitleHTML} from '../lib/news-title.js';
 import {bindBlockSort} from './block-sort.js';
 const sortCleanups=new WeakMap();
 import {renderVisualCanvas,disposeVisualCanvas} from './visual-canvas.js';
@@ -71,6 +72,15 @@ export function renderFormEditor(host,ctx,mode='content'){
   for(const f of fields){if(search&&!`${s.title} ${fieldLabel(f)} ${changes[f.id]??f.value}`.toLowerCase().includes(search))continue;count++;
    const wrap=el('div','edit-field');const label=el('label','field-label',fieldLabel(f));label.htmlFor=f.id;wrap.append(label);
    const value=changes[f.id]??f.value;
+   if(f.newsTitle){
+    const parsed=readNewsTitle(value),title=el('input'),link=el('input');
+    title.id=f.id;title.value=parsed.title;link.id=f.id+'-link';link.type='url';link.placeholder='https://';link.value=parsed.href;
+    const linkLabel=el('label','field-label','제목 링크 (선택)');linkLabel.htmlFor=link.id;
+    const changed=()=>{const next=newsTitleHTML(title.value,link.value);if(next===f.value)delete changes[f.id];else changes[f.id]=next;update();};
+    title.oninput=changed;link.oninput=changed;
+    const remove=button('링크 삭제',()=>{link.value='';changed();},'quiet');
+    wrap.append(title,linkLabel,link,remove,el('p','muted','주소를 입력하면 제목 뒤에 ↗가 자동으로 붙습니다.'));container.append(wrap);continue;
+   }
    if(f.type==='media'&&f.url&&f.tag==='img')imagePreview(value,wrap);
    if(f.url&&['video','source'].includes(f.tag)&&f.attribute!=='poster'&&value){
     const video=el('video','asset-preview');video.controls=true;video.preload='metadata';video.playsInline=true;video.setAttribute('aria-label','영상 미리보기');wrap.append(video);
