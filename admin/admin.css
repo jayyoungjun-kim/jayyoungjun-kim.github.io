@@ -18,3 +18,5 @@ body{background:#f7f8fa;color:#20242b;font-family:Arial,'Apple SD Gothic Neo','M
 .media-card img{display:block;width:100%;height:auto;object-fit:contain;background:#f4f6f9}
 .media-card p{overflow-wrap:anywhere;font-size:13px}.media-card small{display:block;color:#657286;margin-bottom:10px}
 .media-card button{margin:4px 4px 0 0;font-size:12px}
+
+.sync-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;color:#657286;font-size:12px}.sync-strip button{font-size:12px;padding:6px 10px}

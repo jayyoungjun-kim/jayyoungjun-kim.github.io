@@ -1,3 +1,5 @@
+import {startLiveSync,syncDecision} from './live-sync.js';
+import {updateCanvasStyles} from './visual-canvas.js';
 import { optimizeImage } from './image-optimizer.js';
 import { REPOSITORY, SITE_ORIGIN, GOOGLE_CLIENT_ID, API_ORIGIN } from './config.js';
 import { renderSectionEditor, revealSection } from './section-editor.js';
@@ -7,7 +9,7 @@ const service = new GoogleAdmin(REPOSITORY, SITE_ORIGIN, API_ORIGIN);
 
 const $ = id => document.getElementById(id);
 let token = false, pages = [], current = null, changes = {}, activeTab = 'content', busy = false, uploadField;
-let pollingTimer;
+let pollingTimer,liveSync,lastSiteCSS='',syncEpoch=0;
 const objectURLs = new Set();
 const names = { 'index.html': 'HOME', 'about.html': 'ABOUT', 'info.html': 'INFO', 'JavaScript/script.js': '홈 타이핑 소개' };
 const core = path => path in names;
@@ -49,7 +51,7 @@ async function api(path, options = {}) {
   }
 }
 function showLogin(expired = false) {
-  token = false; service.disconnect();
+  token = false; syncEpoch++;liveSync?.stop();service.disconnect();
   $('login').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
   $('account').textContent = '';
   if (expired) notice('연결이 해제되었습니다. Google로 다시 로그인하면 편집하던 내용을 계속 사용할 수 있습니다.', true);
@@ -66,6 +68,7 @@ async function login(credential) {
       await loadPages();
       if (!current) await openPage('index.html');
       notice('Google로 로그인했습니다. 초안은 이 브라우저에만 저장됩니다.');
+      startSync();
     } catch (e) { showLogin(); throw e; }
   });
 }
@@ -81,6 +84,44 @@ function setup() {
   script.onerror=()=>{$('connection').textContent='Google 로그인 버튼을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.';};
   document.head.append(script);
 }
+function startSync(){
+ syncEpoch++;liveSync?.stop();
+ liveSync=startLiveSync({active:()=>token&&!busy&&document.visibilityState!=='hidden'&&!document.querySelector('dialog[open]'),check:syncRemote});
+ liveSync.tick();
+}
+async function syncRemote(){
+ const selected=current,epoch=syncEpoch;
+ try{
+  const result=await api('/api/pages');
+  if(!token||busy||epoch!==syncEpoch||selected!==current||document.querySelector('dialog[open]'))return;
+  const decision=syncDecision(current,changes,result.pages);
+  const introChanged=pages.find(p=>p.path==='JavaScript/script.js')?.sha!==result.pages.find(p=>p.path==='JavaScript/script.js')?.sha;
+  if(decision==='conflict'){
+   current.conflict=true;$('conflict').hidden=false;updateButtons();
+   $('sync-status').textContent='외부 변경 발견 · 편집 중인 내용은 보존했습니다';
+  }else if(decision==='refresh'||decision==='removed'){
+   const path=decision==='removed'?'index.html':current.page;
+   const latest=await api('/api/page?page='+encodeURIComponent(path));
+   // The user may have started typing or switched pages during the request.
+   if(!token||busy||epoch!==syncEpoch||current!==selected||dirty()||current?.revision||document.querySelector('dialog[open]'))return;
+   current=latest;changes={};$('page-title').textContent=names[path]||current.title.replace(' — Jay Youngjun Kim','');$('page-path').textContent=path;
+   $('conflict').hidden=!current.conflict;renderFields();updateButtons();
+   $('sync-status').textContent='최신 변경을 반영했습니다 · '+new Date().toLocaleTimeString('ko-KR');
+  }else{
+   if(current?.conflict){current.conflict=false;$('conflict').hidden=true;updateButtons();}
+   if(introChanged&&current?.page==='index.html'&&!dirty()&&!current.revision)renderFields();
+   $('sync-status').textContent='자동 동기화 · '+new Date().toLocaleTimeString('ko-KR');
+  }
+  pages=result.pages;renderPages();
+  try{
+   const response=await fetch(SITE_ORIGIN+'/css/style.css',{cache:'no-store',credentials:'omit'});
+   if(response.ok){const css=await response.text();if(token&&epoch===syncEpoch&&css!==lastSiteCSS){lastSiteCSS=css;updateCanvasStyles(css);}}
+  }catch{/* Content sync remains available if the stylesheet fetch fails. */}
+ }catch(e){if(token)$('sync-status').textContent='동기화 연결 확인 중 · 잠시 후 재시도합니다';}
+}
+$('sync-now').onclick=()=>liveSync?.tick();
+window.addEventListener('focus',()=>liveSync?.tick());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')liveSync?.tick();});
 async function loadPages() { pages = (await api('/api/pages')).pages; renderPages(); }
 function renderPages() {
   $('pages').replaceChildren();
@@ -272,7 +313,7 @@ $('export-draft').onclick = () => run(async () => {
   const a = document.createElement('a'); a.href = url; a.download = `${current.page.replaceAll('/','-')}-draft.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   notice('초안과 연결된 임시 파일을 백업했습니다. 토큰은 포함되지 않습니다.');
 });
-window.addEventListener('pagehide', () => { service.disconnect(); token=false; });
+window.addEventListener('pagehide', () => { liveSync?.stop();syncEpoch++;service.disconnect(); token=false; });
 window.addEventListener('pageshow', e => { if(e.persisted)showLogin(true); });
 window.addEventListener('beforeunload', e => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
 setup();

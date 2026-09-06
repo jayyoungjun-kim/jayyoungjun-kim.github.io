@@ -15,7 +15,7 @@ function boot(origin) {
     if(attrs['data-close'])closes.push({...element(),dataset:{close:attrs['data-close']}});
     for(const child of n.childNodes||[])visit(child);
   };visit(parse(html));
-  const document={getElementById:id=>{assert.ok(elements.has(id),`Missing element: ${id}`);return elements.get(id);},
+  const document={addEventListener(){},getElementById:id=>{assert.ok(elements.has(id),`Missing element: ${id}`);return elements.get(id);},
     querySelectorAll:()=>closes,createElement:()=>element(),head:{append(){}}};
   const context={document,location:{origin,hostname:origin==='null'?'':new URL(origin).hostname},
     window:{addEventListener:(name,fn)=>{listeners[name]=fn;}},URL,Blob,TextEncoder,TextDecoder,atob,btoa,
