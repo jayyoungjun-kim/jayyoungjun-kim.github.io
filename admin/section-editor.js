@@ -6,11 +6,12 @@ export function revealSection(id){pendingSelection=id;}
 let page='',selectedIndex=0,previousData,selection,dragging,view='content';
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const button=(text,fn,cls='')=>{const b=el('button',cls,text);b.type='button';b.onclick=fn;return b;};
-const names={category:'카테고리',card:'작업',aboutGroup:'섹션',infoGroup:'섹션',aboutItem:'소개',infoItem:'내용',news:'소식',detail:'섹션',part:'내용',fixed:'기본 정보',settings:'설정'};
+const names={participants:'참여자 목록',participant:'참여자',navigation:'프로젝트 연결',projectLink:'프로젝트 연결',category:'카테고리',card:'작업',aboutGroup:'섹션',infoGroup:'섹션',aboutItem:'소개',infoItem:'내용',news:'소식',detail:'섹션',part:'내용',fixed:'기본 정보',settings:'설정'};
 export function fieldLabel(f){
  if(f.attribute==='alt')return '이미지 설명';if(f.attribute==='poster')return '영상 표지 이미지';
  if(f.url)return f.type==='meta'?(f.label.includes('image')?'공유 이미지':'공유 주소'):f.tag==='a'?'연결 주소':f.tag==='iframe'?'YouTube · Vimeo 임베드 주소':['source','video'].includes(f.tag)?'영상 주소':'이미지 주소';
  const l=f.label;
+ if(/stakeholder title/.test(l))return '역할';if(/stakeholder body/.test(l))return '참여자 이름';if(/pagination.*project/.test(l))return '프로젝트 표시 이름';if(/pagination/.test(l))return '이동 링크 문구';
  if(/og:title/.test(l))return '공유 제목';if(/description/.test(l))return '검색 · 공유 설명';if(/og:type/.test(l))return '콘텐츠 유형';
  if(/list title/.test(l))return '작업 제목';if(/list category/.test(l))return '작업 분류';if(/main content title/.test(l))return '카테고리 이름';
  if(/footnote/.test(l))return '캡션';if(/date/.test(l))return '날짜';if(/footnote/.test(l))return '각주';if(/body.*kr|profile kr/.test(l))return '본문 · 한국어';if(/body.*en|profile en/.test(l))return '본문 · English';
@@ -54,7 +55,7 @@ export function renderFormEditor(host,ctx,mode='content'){
  function peersFor(s){return all.filter(x=>x.parent===s.parent&&x.movable&&(x.kind===s.kind||s.kind==='detail'||['infoItem','news'].includes(s.kind)&&['infoItem','news'].includes(x.kind)));}
  function move(s,delta){const peers=peersFor(s),target=peers[peers.indexOf(s)+delta];if(target)runOperation({action:'move',id:s.id,target:target.id,position:delta<0?'before':'after'});}
  function actions(s){const wrap=el('div','section-actions');if(!s.movable)return wrap;
-  for(const [label,fn]of[['↑',()=>move(s,-1)],['↓',()=>move(s,1)],['복제',()=>runOperation({action:'duplicate',id:s.id})],['삭제',()=>runOperation({action:'remove',id:s.id})]]){const b=button(label,fn,label==='삭제'?'quiet danger':'quiet');b.setAttribute('aria-label',`${s.title} ${label==='↑'?'위로 이동':label==='↓'?'아래로 이동':label}`);if(label==='↑'||label==='↓'){const peers=peersFor(s);b.disabled=label==='↑'?peers.indexOf(s)===0:peers.indexOf(s)===peers.length-1;}wrap.append(b);}return wrap;}
+  for(const [label,fn]of[['↑',()=>move(s,-1)],['↓',()=>move(s,1)],['복제',()=>runOperation({action:'duplicate',id:s.id})],['삭제',()=>runOperation({action:'remove',id:s.id})]]){if(s.kind==='projectLink'&&label!=='삭제')continue;const b=button(label,fn,label==='삭제'?'quiet danger':'quiet');b.setAttribute('aria-label',`${s.title} ${label==='↑'?'위로 이동':label==='↓'?'아래로 이동':label}`);if(label==='↑'||label==='↓'){const peers=peersFor(s);b.disabled=label==='↑'?peers.indexOf(s)===0:peers.indexOf(s)===peers.length-1;}wrap.append(b);}return wrap;}
  function row(s,depth){const r=el('div','outline-row'+(selected?.id===s.id?' selected':''));r.style.setProperty('--depth',depth);if(s.movable)r.append(handle(s));else r.append(el('span','row-icon',s.kind==='settings'?'⚙':'•'));
   if(s.thumbnail){const thumb=el('img','outline-thumb');thumb.alt='';thumb.loading='lazy';thumb.referrerPolicy='no-referrer';try{const url=new URL(s.thumbnail,ctx.siteOrigin);if(['https:','http:'].includes(url.protocol))thumb.src=url.href;}catch{}thumb.onerror=()=>{thumb.hidden=true;};r.append(thumb);}
   const number=s.kind==='detail'?String(all.filter(x=>x.kind==='detail').indexOf(s)+1).padStart(2,'0')+' · ':'';
@@ -92,8 +93,8 @@ export function renderFormEditor(host,ctx,mode='content'){
    }
    const long=f.type==='text'&&value.length>65||/본문|각주|설명/.test(fieldLabel(f))&&!f.url;const input=el(long?'textarea':'input');input.id=f.id;input.value=value;if(long)input.rows=Math.min(12,Math.max(3,Math.ceil(value.length/75)));
    input.oninput=()=>{if(input.value===f.value)delete changes[f.id];else changes[f.id]=input.value;update();};wrap.append(input);
-   if(f.url&&f.tag!=='iframe'){const tools=el('div','field-tools');tools.append(button(['img','video','source'].includes(f.tag)?'파일 선택 · 교체':'파일 연결',()=>upload(f.id),'upload'));
-    if(f.tag==='a'&&selected.kind==='card'){const select=el('select');select.setAttribute('aria-label','연결할 상세 페이지');select.append(new Option('상세 페이지 선택…',''));for(const p of pages.filter(p=>p.path.endsWith('.html')&&!['index.html','about.html','info.html'].includes(p.path))){select.append(new Option(p.path.replace('.html','').replaceAll('-',' '),p.path));}select.value=value;select.onchange=()=>{if(!select.value)return;input.value=select.value;input.oninput();};tools.append(select);}
+   if(f.url&&f.tag!=='iframe'){const tools=el('div','field-tools');if(s.kind!=='projectLink')tools.append(button(['img','video','source'].includes(f.tag)?'파일 선택 · 교체':'파일 연결',()=>upload(f.id),'upload'));
+    if(f.tag==='a'&&['card','projectLink'].includes(s.kind)){const select=el('select');select.setAttribute('aria-label','연결할 상세 페이지');select.append(new Option('상세 페이지 선택…',''));for(const p of pages.filter(p=>p.path.endsWith('.html')&&!['index.html','about.html','info.html'].includes(p.path))){select.append(new Option(p.path.replace('.html','').replaceAll('-',' '),p.path));}select.value=value;select.onchange=()=>{if(!select.value)return;input.value=select.value;input.oninput();};tools.append(select);}
     wrap.append(tools);
    }container.append(wrap);
   }return count;
@@ -106,13 +107,14 @@ export function renderFormEditor(host,ctx,mode='content'){
  for(const childId of selected.children){const child=all.find(s=>s.id===childId);
   if(child.kind==='part'){
    const box=el('section','semantic-field');fieldsFor(child,box);const more=el('details','field-options');more.append(el('summary','','항목 구성'),actions(child));box.append(more);inspector.append(box);
-  }else if(child.kind==='detailPart'){
-   const box=el('section','inline-block');const h=el('div','inline-heading');h.append(handle(child),el('h3','',child.thumbnail?'이미지':fieldLabel(current.fields.find(f=>f.id===child.fieldIds[0])||{label:'',type:'text'})),actions(child));box.append(h);fieldsFor(child,box);dropZone(box,child);inspector.append(box);
+  }else if(['detailPart','participant','projectLink'].includes(child.kind)){
+   const box=el('section','inline-block');const h=el('div','inline-heading');if(child.kind!=='projectLink')h.append(handle(child));h.append(el('h3','',child.kind==='projectLink'?child.title:child.kind==='participant'?'참여자':child.thumbnail?'이미지':fieldLabel(current.fields.find(f=>f.id===child.fieldIds[0])||{label:'',type:'text'})),actions(child));box.append(h);fieldsFor(child,box);dropZone(box,child);inspector.append(box);
   }else{
    const card=el('article',child.kind==='card'?'work-card':'child-card');const h=el('div','child-heading');h.append(handle(child),button(child.title,()=>select(child),'child-title'),actions(child));card.append(h);if(child.kind==='card')imagePreview(child.thumbnail,card);else card.append(el('p','child-summary',descendants(child).flatMap(s=>s.fieldIds).map(id=>current.fields.find(f=>f.id===id)).filter(f=>f?.type==='text').map(f=>f.plain??f.value).join(' ').slice(0,180)));card.append(button('내용 편집 →',()=>select(child),'edit-child'));dropZone(card,child);inspector.append(card);
   }
  }
- const choices=allowedTemplates(selected,page);if(choices.length)inspector.append(button(selected.kind==='category'?'+ 작업 카드 추가':'+ 내용 블록 추가',()=>ctx.add(selected,choices),'add-block'));
+ const choices=allowedTemplates(selected,page);if(selected.kind==='navigation'){for(const choice of choices)inspector.append(button('+ '+templateNames[choice]+' 추가',()=>ctx.add(selected,[choice]),'add-block'));}
+ else if(choices.length)inspector.append(button(selected.kind==='participants'?'+ 참여자 추가':selected.kind==='category'?'+ 작업 카드 추가':'+ 내용 블록 추가',()=>ctx.add(selected,choices),'add-block'));
  if(selected.kind==='card')inspector.append(el('p','editor-tip','카드는 홈 화면의 썸네일입니다. 상세 페이지 본문은 왼쪽 프로젝트 메뉴에서 편집하세요.'));
  if(selected.kind==='detail')inspector.append(el('p','muted','이미지와 텍스트는 하나의 섹션으로 함께 이동합니다. 아래 추가 버튼으로 이미지나 설명을 더 넣을 수 있습니다.'));
 }
